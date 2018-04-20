@@ -2,7 +2,7 @@ import math
 import sys
 import os
 import random
-import util
+#import util
 
 from discord import *
 from DMOBGame import *

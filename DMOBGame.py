@@ -1,4 +1,5 @@
 import time
+
 class DMOBGame:
     def __init__(self, bot, channel):
         self.channel = channel

@@ -10,7 +10,7 @@ class DMOBPlayer:
         self.language = language
 
     def save(self):
-        s = open("players\\" + str(self.discord_id) + ".json", "w")
+        s = open("players/" + str(self.discord_id) + ".json", "w")
         s.write(str(self.__dict__).replace("'","\""))
         s.close()
 
@@ -23,7 +23,7 @@ class DMOBPlayer:
     @staticmethod
     def read(discord_id):
         try:
-            f = open("players\\" + discord_id + ".json","r")
+            f = open("players/" + discord_id + ".json","r")
             d = json.loads(f.read())
             f.close()
             return DMOBPlayer(d["discord_id"],d["points"],d["rank"],d["language"])

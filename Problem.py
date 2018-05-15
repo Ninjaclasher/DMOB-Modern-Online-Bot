@@ -1,4 +1,21 @@
 class Problem:
-    def __init__(self, file_name, point_value):
-        self.file = file_name
+    def __init__(self, problem_code, name, point_value):
+        self.file = "problems/" + problem_code + ".pdf"
+        self.problem_name = name
+        self.problem_code = problem_code
         self.point_value = point_value
+    
+    def save(self):
+        s = open("problems/" + self.problem_code + ".json", "w")
+        s.write(str(self.__dict__).replace("'","\""))
+        s.close()
+
+    @staticmethod
+    def read(problem_code):
+        try:
+            f = open("problems/" + problem_code + ".json","r")
+            d = json.loads(f.read())
+            f.close()
+            return Problem(d["problem_code"],d["name"],d["point_value"])
+        except FileNotFoundError:
+            print("File Not Found")

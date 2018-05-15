@@ -6,7 +6,22 @@ import random
 from discord import *
 from DMOBGame import *
 from DMOBPlayer import *
-from util import *
+
+help_list = {
+    "help": "",
+    "contest":"",
+    "language":"",
+
+}
+languages = ["cpp", "java8", "turing", "python2", "python3", "pypy2", "pypy3"]
+two_commands = ["contest", "language"]
+contest_list = [Contest.read(x.split(".")[0]) for x in os.listdir("contests") if x.split(".")[1] == "json"]
+problem_list = [Problem.read(x.split(".")[0]) for x in os.listdir("problems") if x.split(".")[1] == "json"]
+users = {}
+for x in os.listdir("players"):
+    x = x.split(".")
+    if x[1] == "json":
+        users[x[0]] = DMOBPlayer.read(x[0])
 
 bot = Client()
 
@@ -18,7 +33,6 @@ async def on_ready():
     print("------")
 
 games = {}
-users = {}
 
 async def process_command(send, message, command, content):
     try:
@@ -80,5 +94,15 @@ async def on_message(message):
         stripped_message = message.content[len(COMMAND_PREFIX):].strip().split(" ")
         command = stripped_message[0]
         await process_command(bot.send_message, message, command, stripped_message[1:])
-
-bot.run("NDQ1NzUxNzUyNjEyOTA0OTYw.DdvH5g.N5tDh7vajmG0cGH1mG4EmkVT9C4")
+try:
+    bot.loop.run_until_complete(bot.start("NDQ1NzUxNzUyNjEyOTA0OTYw.DdvH5g.N5tDh7vajmG0cGH1mG4EmkVT9C4"))
+except KeyboardInterrupt:
+    bot.loop.run_until_complete(bot.logout())
+    for x in users.values():
+        x.save()
+    for x in problem_list:
+        x.save()
+    for x in contest_list:
+        x.save()
+finally:
+    bot.loop.close()

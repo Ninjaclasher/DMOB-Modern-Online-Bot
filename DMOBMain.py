@@ -5,13 +5,14 @@ import random
 
 from discord import *
 from DMOBGame import *
+from Problem import *
 from DMOBPlayer import *
+from Contest import *
 
 help_list = {
-    "help": "",
-    "contest":"",
-    "language":"",
-
+    "help": "This command",
+    "contest": "Manages a contest. Subcommands {start, end, submit, problem, join, rankings}",
+    "language": "Manages your preferred language. Subcommands {list, change, current}",
 }
 languages = ["cpp", "java8", "turing", "python2", "python3", "pypy2", "pypy3"]
 two_commands = ["contest", "language"]
@@ -42,7 +43,7 @@ async def process_command(send, message, command, content):
     try:
         user = users[message.author.id]
     except KeyError:
-        user = users[message.author.id] = DMOBPlayer(message.author.id,0,0,"cpp")
+        user = users[message.author.id] = DMOBPlayer(message.author.id,0,0,"cpp",0)
     if command in two_commands:
         try:
             second_command = content[0].lower()
@@ -51,17 +52,25 @@ async def process_command(send, message, command, content):
             await bot.send_message(message.channel, "Please enter a subcommand.")
             return
     if command == "help":
-        pass
+        msg = ["```","Available commands from DMOB:"]
+        for key, value in help_list.items():
+            msg.append(key + " - " + value)
+        msg.append("```")
+        await bot.send_message(message.channel, "\n".join(msg))
     elif command == "contest":
         if second_command == "start":
             try:
-                await game.start_round(int(content[0]))
+                await game.start_round(contest_list[0], int(content[0]))
             except (IndexError, ValueError):
-                await game.start_round()
+                await game.start_round(contest_list[0])
         elif second_command == "end":
             await game.end_round()
         elif second_command == "submit":
-            pass
+            if len(message.attachments) != 1:
+                await bot.send_message(message.channel, "Please upload one file for judging.")
+            if len(message.content) != 1:
+                await bot.send_message(message.channel, "Please select a problem to submit the code to.")
+            await game.submit(user, message.content[0], message.attachmenst[0])
         elif second_command == "problem":
             if not await game.check_contest_running():
                 return
@@ -73,7 +82,7 @@ async def process_command(send, message, command, content):
             await game.rankings()
     elif command == "language":
         if second_command == "list":
-            await bot.send_message(message.channel, "Available languages are " + " ".join(languages))
+            await bot.send_message(message.channel, "Available languages are `" + " ".join(languages) + "`")
         elif second_command == "change":
             try:
                 lang = content[0].lower()
@@ -84,7 +93,7 @@ async def process_command(send, message, command, content):
             except IndexError:
                 await bot.send_message(message.channel, "Please enter a valid language.")
         elif second_command == "current":
-            await bot.send_message(message.channel, "Your current language is " + user.language)
+            await bot.send_message(message.channel, "Your current language is `" + user.language + "`")
 
 COMMAND_PREFIX = "&"
 
@@ -94,15 +103,14 @@ async def on_message(message):
         stripped_message = message.content[len(COMMAND_PREFIX):].strip().split(" ")
         command = stripped_message[0]
         await process_command(bot.send_message, message, command, stripped_message[1:])
+
+token = ""
+
 try:
-    bot.loop.run_until_complete(bot.start("NDQ1NzUxNzUyNjEyOTA0OTYw.DdvH5g.N5tDh7vajmG0cGH1mG4EmkVT9C4"))
+    bot.loop.run_until_complete(bot.start(token))
 except KeyboardInterrupt:
     bot.loop.run_until_complete(bot.logout())
     for x in users.values():
-        x.save()
-    for x in problem_list:
-        x.save()
-    for x in contest_list:
         x.save()
 finally:
     bot.loop.close()

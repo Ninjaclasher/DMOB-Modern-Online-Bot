@@ -63,23 +63,32 @@ async def process_command(send, message, command, content):
                 await game.start_round(contest_list[0], int(content[0]))
             except (IndexError, ValueError):
                 await game.start_round(contest_list[0])
-        elif second_command == "end":
+            return
+        if not await game.check_contest_running():
+            return
+        
+        if second_command == "join":
+            await game.join(user)
+            return
+        elif second_command == "rankings":
+            await game.rankings()
+            return
+
+        if not await game.in_contest(user):
+            await bot.send_message(message.channel, "You are not in this contest! Please join first.")
+            return
+
+        if second_command == "end":
             await game.end_round()
         elif second_command == "submit":
             if len(message.attachments) != 1:
                 await bot.send_message(message.channel, "Please upload one file for judging.")
-            if len(message.content) != 1:
+            elif len(content) != 1:
                 await bot.send_message(message.channel, "Please select a problem to submit the code to.")
-            await game.submit(user, message.content[0], message.attachmenst[0])
+            else:
+                await game.submit(message, user, content[0], message.attachments[0]["url"])
         elif second_command == "problem":
-            if not await game.check_contest_running():
-                return
-            if len(content) != 1 or not await game.display_problem(user, content[0].strip().lower()):
-                await bot.send_message(message.channel, "Please enter a valid problem code.")
-        elif second_command == "join":
-            await game.join(user)
-        elif second_command == "rankings":
-            await game.rankings()
+            await game.display_problem(user, content[0].strip().lower() if len(content) > 0 else " ")
     elif command == "language":
         if second_command == "list":
             await bot.send_message(message.channel, "Available languages are `" + " ".join(languages) + "`")
@@ -89,7 +98,7 @@ async def process_command(send, message, command, content):
                 if not lang in languages:
                     raise IndexError
                 user.language = lang
-                await bot.send_message(message.channel, "Your language has been changed to " + lang)
+                await bot.send_message(message.channel, "Your language has been changed to`" + lang + '`')
             except IndexError:
                 await bot.send_message(message.channel, "Please enter a valid language.")
         elif second_command == "current":
@@ -99,12 +108,14 @@ COMMAND_PREFIX = "&"
 
 @bot.event
 async def on_message(message):
+    if message.author.bot:
+        return
     if message.type == MessageType.default and message.content.startswith(COMMAND_PREFIX):
         stripped_message = message.content[len(COMMAND_PREFIX):].strip().split(" ")
         command = stripped_message[0]
         await process_command(bot.send_message, message, command, stripped_message[1:])
 
-token = ""
+#token = ""
 
 try:
     bot.loop.run_until_complete(bot.start(token))

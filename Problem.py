@@ -1,4 +1,5 @@
 import json
+
 class Problem:
     def __init__(self, problem_code, problem_name, point_value):
         self.file = "problems/" + problem_code + ".pdf"

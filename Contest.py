@@ -1,5 +1,7 @@
 import json
+
 from Problem import *
+
 class Contest:
     def __init__(self, name, problems):
         self.name = name

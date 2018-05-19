@@ -3,17 +3,35 @@ import sys
 import os
 import random
 
+from Contest import *
 from discord import *
 from DMOBGame import *
-from Problem import *
 from DMOBPlayer import *
-from Contest import *
+from Problem import *
 
+COMMAND_PREFIX = "&"
 help_list = {
     "help": "This command",
-    "contest": "Manages a contest. Subcommands {start, end, submit, problem, join, rankings}",
-    "language": "Manages your preferred language. Subcommands {list, change, current}",
+    "contest (subcommand)": "Manages a contest. Type `" + COMMAND_PREFIX + "contest help` for subcommands.",
+    "language (subcommand)": "Manages your preferred language settings. Type `" + COMMAND_PREFIX + "language help` for subcommands.",
 }
+contest_help_list = {
+    "help": "Displays this message.",
+    "start [time window]": "Starts a contest for the specified amount of time. Defaults to 3 hours.",
+    "end": "Ends the contest.",
+    "submit (problem code)": "Submit to a problem.",
+    "problem [problem code]": "View the problem statement for a problem. Enter no problem code to list all the problems in the contest.",
+    "join": "Join the contest.",
+    "rankings": "View the current leaderboard for the contest.",
+    "info": "Displays information on the contest.",
+}
+language_help_list = {
+    "help": "Displays this message.",
+    "list": "List the available language options.",
+    "current": "Displays your current preferred language.",
+    "change (language code)": "Change your preferred language to the specified language.",
+}
+
 languages = ["cpp", "java8", "turing", "python2", "python3", "pypy2", "pypy3"]
 two_commands = ["contest", "language"]
 contest_list = [Contest.read(x.split(".")[0]) for x in os.listdir("contests") if x.split(".")[1] == "json"]
@@ -35,6 +53,7 @@ async def on_ready():
 
 games = {}
 
+
 async def process_command(send, message, command, content):
     try:
         game = games[message.channel]
@@ -52,14 +71,21 @@ async def process_command(send, message, command, content):
             await bot.send_message(message.channel, "Please enter a subcommand.")
             return
     if command == "help":
-        msg = ["```","Available commands from DMOB:"]
+        em = Embed(title="Help",description="Available commands from DMOB", colour=0x4286F4)
         for key, value in help_list.items():
-            msg.append(key + " - " + value)
-        msg.append("```")
-        await bot.send_message(message.channel, "\n".join(msg))
+            em.add_field(name=COMMAND_PREFIX + key, value=value)
+        await bot.send_message(message.channel,embed=em)
     elif command == "contest":
-        if second_command == "start":
+        if second_command == "help":
+            em = Embed(title="Contest Help",description="Available Contest commands from DMOB", color=0x4286F4)
+            for key, value in contest_help_list.items():
+                em.add_field(name=COMMAND_PREFIX + "contest " + key, value=value)
+            await bot.send_message(message.channel,embed=em)
+            return
+        elif second_command == "start":
             try:
+                if int(content[0]) < 1 or int(content[0]) > 31536000:
+                    raise ValueError
                 await game.start_round(contest_list[0], int(content[0]))
             except (IndexError, ValueError):
                 await game.start_round(contest_list[0])
@@ -73,14 +99,18 @@ async def process_command(send, message, command, content):
         elif second_command == "rankings":
             await game.rankings()
             return
+        elif second_command == "info":
+            await game.info()
+            return
+        elif second_command == "end":
+            await game.end_round()
+            return
 
         if not await game.in_contest(user):
             await bot.send_message(message.channel, "You are not in this contest! Please join first.")
             return
 
-        if second_command == "end":
-            await game.end_round()
-        elif second_command == "submit":
+        if second_command == "submit":
             if len(message.attachments) != 1:
                 await bot.send_message(message.channel, "Please upload one file for judging.")
             elif len(content) != 1:
@@ -90,7 +120,12 @@ async def process_command(send, message, command, content):
         elif second_command == "problem":
             await game.display_problem(user, content[0].strip().lower() if len(content) > 0 else " ")
     elif command == "language":
-        if second_command == "list":
+        if second_command == "help":
+            em = Embed(title="Language Help",description="Available Language commands from DMOB", color=0x4286F4)
+            for key, value in language_help_list.items():
+                em.add_field(name=COMMAND_PREFIX + "language " + key, value=value)
+            await bot.send_message(message.channel, embed=em)
+        elif second_command == "list":
             await bot.send_message(message.channel, "Available languages are `" + " ".join(languages) + "`")
         elif second_command == "change":
             try:
@@ -104,7 +139,6 @@ async def process_command(send, message, command, content):
         elif second_command == "current":
             await bot.send_message(message.channel, "Your current language is `" + user.language + "`")
 
-COMMAND_PREFIX = "&"
 
 @bot.event
 async def on_message(message):

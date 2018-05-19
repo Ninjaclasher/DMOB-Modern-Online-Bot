@@ -21,6 +21,9 @@ class DMOBPlayer:
     def __str__(self):
         return "ID: {}, Points: {}, Rank: {}".format(self.discord_id,self.points,self.rank)
 
+    def __eq__(self, other):
+        return self.discord_id == other.discord_id
+
     @staticmethod
     def read(discord_id):
         try:

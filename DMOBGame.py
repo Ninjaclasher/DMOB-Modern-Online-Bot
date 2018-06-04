@@ -23,7 +23,7 @@ class DMOBGame:
         self.members = []
         self.contest = None
     async def count_down(self):
-        announce_time = [86400,43600,21600,7200,3600,1800,600,300,60,30,10,5,-1]
+        announce_time = [1209600,604800,86400,43600,21600,7200,3600,1800,600,300,60,30,10,5,-1]
         while announce_time[0] > self.window/2:
             del announce_time[0]
         while time.time()-self.start_time < self.window:

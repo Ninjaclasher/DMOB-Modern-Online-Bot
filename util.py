@@ -10,7 +10,10 @@ def to_time(secs):
     elif secs < 86400:
         return (str(secs//3600) + " hour" + plural(secs//3600) + " " + to_time(secs%3600)).strip()
     elif secs < 604800:
-        return(str(secs//86400) + " day" + plural(secs//86400) + " " + to_time(secs%86400)).strip()
+        return (str(secs//86400) + " day" + plural(secs//86400) + " " + to_time(secs%86400)).strip()
+    elif secs < 2419200:
+        return (str(secs//604800) + " week" + plural(secs//604800) + " " + to_time(secs%604800)).strip()
+        
 def to_memory(kilobyte):
     if kilobyte < 2**10:
         return str(kilobyte) + "KB"

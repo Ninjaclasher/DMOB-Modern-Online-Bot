@@ -15,13 +15,14 @@ def to_time(secs):
         return (str(secs//604800) + " week" + plural(secs//604800) + " " + to_time(secs%604800)).strip()
         
 def to_memory(kilobyte):
-    if kilobyte < 2**10:
-        return str(kilobyte) + "KB"
-    elif kilobyte < 2**20:
-        return str(round(kilobyte/float(2**10),2)) + "MB"
-    elif kilobyte < 2**30:
-        return str(round(kilobyte/float(2**20),2)) + "GB"
-    raise ValueError
+    if kilobyte < 0:
+        raise ValueError("Kilobyte cannot be negative.")
+    byte = ["K", "M", "G", "T", "P", "E", "Z"]
+    for i, j in enumerate(byte, 1):
+        if kilobyte >= 2**(i*10):
+            continue
+        return str(round(kilobyte/float(2**((i-1)*10)),2)) + j + "B"
+    raise ValueError("Kilobyte is too large.")
 
 COMMAND_PREFIX = "&"
 BOT_COLOUR = 0x4286F4

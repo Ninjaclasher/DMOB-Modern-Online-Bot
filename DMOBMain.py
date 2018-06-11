@@ -120,27 +120,19 @@ async def process_command(send, message, command, content):
         elif second_command == "problem":
             await game.display_problem(user, content[0].strip().lower() if len(content) > 0 else " ")
     elif command == "language":
-        if second_command == "help":
-            em = Embed(title="Language Help",description="Available Language commands from DMOB", color=BOT_COLOUR)
-            for key, value in language_help_list.items():
-                em.add_field(name=COMMAND_PREFIX + "language " + key, value=value)
-            await bot.send_message(message.channel, embed=em)
-        elif second_command == "list":
-            em = Embed(title="Language List", description="List of available languages", color=BOT_COLOUR)
-            em.add_field(name="Languages", value="\n".join(languages))
-            await bot.send_message(message.channel, embed=em)
-        elif second_command == "change":
-            try:
-                lang = content[0]
-                if not lang in languages:
-                    raise IndexError
-                user.language = lang
-                await bot.send_message(message.channel, "Your language has been changed to `" + lang + '`')
-            except IndexError:
-                await bot.send_message(message.channel, "Please enter a valid language.")
-        elif second_command == "current":
-            await bot.send_message(message.channel, "Your current language is `" + user.language + "`")
-
+        call = {
+            'help': Language.help,
+            'list': Language.list,
+            'change': Language.change,
+            'current': Language.current,
+        }
+        info = {
+            'bot' : bot,
+            'channel' : message.channel,
+            'user' : user,
+            'content' : content,
+        }
+        await call[second_command](info)
 
 @bot.event
 async def on_message(message):

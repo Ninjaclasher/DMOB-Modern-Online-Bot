@@ -4,7 +4,7 @@ import requests
 import time
 import threading
 
-from model import Problem, ContestPlayer
+from models import Problem, ContestPlayer
 from discord import *
 from util import *
 

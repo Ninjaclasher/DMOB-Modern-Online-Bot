@@ -5,7 +5,7 @@ import time
 from collections import deque
 
 from event_socket_server import ZlibPacketHandler, ProxyProtocolMixin
-from model import SubmissionTestCase, Submission, Judge
+from models import SubmissionTestCase, Submission, Judge
 
 class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
     def __init__(self, server, socket):

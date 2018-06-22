@@ -4,7 +4,7 @@ import time
 
 from event_socket_server import get_preferred_engine
 from .judgelist import JudgeList
-from model import Judge
+from models import Judge
 
 class JudgeServer(get_preferred_engine()):
     def __init__(self, *args, **kwargs):

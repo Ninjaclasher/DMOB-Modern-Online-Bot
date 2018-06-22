@@ -5,7 +5,7 @@ import random
 import threading
 import asyncio
 
-from model import Contest, Problem, Player
+from models import Contest, Problem, Player
 from bridge import JudgeHandler, JudgeServer
 from discord import *
 from DMOBGame import *
@@ -70,16 +70,16 @@ async def process_command(send, message, command, content):
         elif second_command == "start":
             if len(content) < 1:
                 await bot.send_message(message.channel, "Please select a contest to run.")
-            elif Contest(content[0].lower(), []) not in contest_list:
-                await bot.send_message(message.channel, "Please enter a valid contest.")
             else:
-                c = contest_list.index(Contest(content[0].lower(), []))
+                c = get_element(contest_list, Contest(content[0].lower(), []))
+                if c is None: 
+                    await bot.send_message(message.channel, "Please enter a valid contest.")
                 try:
                     if int(content[1]) < 1 or int(content[1]) > 31536000:
                         raise ValueError
-                    await game.start_round(contest_list[c], int(content[1]))
+                    await game.start_round(c, int(content[1]))
                 except (IndexError, ValueError):
-                    await game.start_round(contest_list[c])
+                    await game.start_round(c)
             return
         elif second_command == "list":
             em = Embed(title="Contest List", description="List of available contests.", color=BOT_COLOUR)
@@ -121,16 +121,16 @@ async def process_command(send, message, command, content):
             await game.display_problem(user, content[0].strip().lower() if len(content) > 0 else " ")
     elif command == "language":
         call = {
-            'help': Language.help,
-            'list': Language.list,
-            'change': Language.change,
+            'help'   : Language.help,
+            'list'   : Language.list,
+            'change' : Language.change,
             'current': Language.current,
         }
         info = {
-            'bot' : bot,
-            'channel' : message.channel,
-            'user' : user,
-            'content' : content,
+            'bot'    : bot,
+            'channel': message.channel,
+            'user'   : user,
+            'content': content,
         }
         await call[second_command](info)
 

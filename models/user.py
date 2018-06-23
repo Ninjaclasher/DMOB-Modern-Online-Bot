@@ -15,7 +15,7 @@ class Player:
         s.close()
 
     def __repr__(self):
-        return "Player('{}','{}','{}','{}','{}')".format(self.discord_id,self.points,self.rank,self.language,self.is_admin)
+        return self.discord_id
 
     def __str__(self):
         return "ID: {}, Points: {}, Rank: {}".format(self.discord_id,self.points,self.rank)

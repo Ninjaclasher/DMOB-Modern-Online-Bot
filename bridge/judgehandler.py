@@ -158,6 +158,10 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
     def on_grading_begin(self, packet):
         self.cases = []
         self.batch_id = None
+    
+    def set_submission(self, id, points, total, time, memory, status_code):
+        user = self.server.judges.submission_info[id]
+        self.server.judges.finished_submissions[id] = Submission(id, points, total, time, memory, status_code, user)
 
     def on_grading_end(self, packet):
         time = 0
@@ -188,19 +192,18 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
             total += batches[i][1]
         points = round(points, 1)
         total = round(total, 1)
-
-        self.server.judges.finished_submissions[packet['submission-id']] = Submission(packet['submission-id'], points, total, time, memory, status_codes[status])
+        self.set_submission(packet['submission-id'], points, total, time, memory, status_codes[status])
         self._free_self(packet)
         self.batch_id = None
 
     def on_compile_error(self, packet):
-        self.submission = Submission(packet['submission-id'], 0.0, 0.0, 0, 0, 'CE')
+        self.set_submission(packet['submission-id'], 0.0, 0.0, 0, 0, 'CE')
         self._free_self(packet)
 
     def on_compile_message(self, packet):
         pass
     def on_internal_error(self, packet):
-        self.submission = Submission(packet['submission-id'], 0.0, 0.0, 0, 0, 'IE')
+        self.set_submission(packet['submission-id'], 0.0, 0.0, 0, 0, 'IE')
         self._free_self(packet)
 
     def on_submission_terminated(self, packet):

@@ -35,12 +35,12 @@ class DMOBGame:
         await self.rankings()
         self.reset()
     async def wait_submission_finish(self, id, user_idx, problem_idx, problem, submission_time):
+        await self.bot.send_message(self.channel, "Submitting code... please wait")
         while True:
             try:
                 sub = self.judge.judges.finished_submissions[id]
                 print(str(sub))
                 score = int(sub.points/float(sub.total)*100) if sub.total > 0 else 0
-                await self.bot.send_message(self.channel, self.members[user_idx].discord_user.mention + ", you received a score of " + str(score) + " for your submission to `" + problem.problem_code + "`. Details on your submission have been PM'd to you.")
                 em = Embed(title="Submission Details", description="Details on your submission to `" + problem.problem_code + "` in the " + self.contest.name + " contest.", color=BOT_COLOUR)
                 em.add_field(name="Problem Name", value=problem.problem_name)
                 em.add_field(name="Submission ID", value=str(sub.submission_id))
@@ -49,6 +49,7 @@ class DMOBGame:
                 em.add_field(name="Total Running Time", value=str(round(sub.time,2)) + "s")
                 em.add_field(name="Memory Usage", value=to_memory(sub.memory))
                 await self.bot.send_message(self.members[user_idx].discord_user, embed=em)
+                await self.bot.send_message(self.channel, self.members[user_idx].discord_user.mention + ", you received a score of " + str(score) + " for your submission to `" + problem.problem_code + "`. Details on your submission have been PM'd to you.")
                 if score > self.members[user_idx].problems[problem_idx]:
                     self.members[user_idx].time[problem_idx] = submission_time-self.start_time
                     self.members[user_idx].problems[problem_idx] = score
@@ -79,17 +80,16 @@ class DMOBGame:
                 p = i
                 break
         if p != -1:
-            await self.bot.send_message(self.channel, "Submitting code... please wait")
-            file_name = problem_code + "_" + user.discord_id + "_" + str(int(time.time()))
-            f = open("submissions/" + file_name, "wb")
-            f.write(requests.get(url).content)
+            code = requests.get(url).content.decode("utf-8")
+            f = open("submissions/" + str(id) + ".code", "w")
+            f.write(code)
             f.close()
         await self.bot.delete_message(message)
         if p == -1:
             await self.bot.send_message(self.channel, "Invalid problem code, `" + problem_code + '`')
             return
         problem = Problem.read(problem_code)
-        self.judge.judges.judge(id, problem_code, problem.time, problem.memory, judge_lang[user.language], open("submissions/" + file_name, "r").read())
+        self.judge.judges.judge(id, problem_code, problem.time, problem.memory, judge_lang[user.language], code, user)
         await self.bot.loop.create_task(self.wait_submission_finish(id, self.members.index(ContestPlayer(user,None,0)), p, problem, submission_time))
 
     async def start_round(self, contest, window=10800):

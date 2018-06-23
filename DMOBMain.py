@@ -5,7 +5,7 @@ import random
 import threading
 import asyncio
 
-from models import Contest, Problem, Player
+from models import Contest, Problem, Player, Submission
 from bridge import JudgeHandler, JudgeServer
 from discord import *
 from DMOBGame import *
@@ -14,6 +14,7 @@ from util import *
 two_commands = ["contest", "language"]
 contest_list = [Contest.read(x.split(".")[0]) for x in os.listdir("contests") if x.split(".")[1] == "json"]
 problem_list = [Problem.read(x.split(".")[0]) for x in os.listdir("problems")]
+submission_list = [Submission.read(x.split(".")[0]) for x in os.listdir("submissions") if x.split(".")[1] == "json"]
 users = {}
 for x in os.listdir("players"):
     x = x.split(".")
@@ -24,7 +25,7 @@ BRIDGED_IP_ADDRESS = [('localhost', 9997)]
 
 bot = Client()
 judge = JudgeServer(BRIDGED_IP_ADDRESS, JudgeHandler)
-id = 1
+id = (max(map(int, [x.split(".")[0] for x in os.listdir("submissions")])) if len(os.listdir("submissions")) > 0 else 0) + 1
 lock  = asyncio.Lock()
 
 @bot.event
@@ -143,7 +144,7 @@ async def on_message(message):
         command = stripped_message[0]
         await process_command(bot.send_message, message, command, stripped_message[1:])
 
-#token = ""
+token = ""
 
 try:
     bot.loop.run_until_complete(bot.start(token))
@@ -154,6 +155,8 @@ except KeyboardInterrupt:
     for x in contest_list:
         x.save()
     for x in problem_list:
+        x.save()
+    for x in judge.judges.finished_submissions.values():
         x.save()
     judge.stop()
 finally:

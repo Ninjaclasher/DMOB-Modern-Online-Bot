@@ -17,6 +17,7 @@ class JudgeList(object):
         self.priority = [self.queue.append(PriorityMarker(i)) for i in range(self.priorities)]
         self.judges = set()
         self.submission_map = {}
+        self.submission_info = {}
         self.finished_submissions = {}
         self.lock = RLock()
 
@@ -73,11 +74,11 @@ class JudgeList(object):
     def check_priority(self, priority):
         return 0 <= priority < self.priorities
 
-    def judge(self, id, problem, time, memory, language, source, priority=1):
+    def judge(self, id, problem, time, memory, language, source, user, priority=1):
         with self.lock:
             if id in self.submission_map:
                 return
-
+            self.submission_info[id] = user
             candidates = [judge for judge in self.judges if not judge.working and judge.can_judge(problem, language)]
             if candidates: 
                 judge = min(candidates, key=attrgetter('load'))

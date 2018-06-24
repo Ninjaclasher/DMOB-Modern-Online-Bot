@@ -3,11 +3,14 @@ import os
 import requests
 import time
 import threading
-import lists
+
 
 from models import Problem, ContestPlayer
 from discord import *
+from settings import *
 from util import *
+
+import database
 
 class DMOBGame:
     def __init__(self, bot, channel, judge):
@@ -41,7 +44,7 @@ class DMOBGame:
         while True:
             try:
                 sub = self.judge.judges.finished_submissions[id]
-                lists.submission_list.add(sub)
+                database.submission_list.add(sub)
                 print(str(sub))
                 score = int(sub.points/float(sub.total)*100) if sub.total > 0 else 0
                 info = {
@@ -85,6 +88,9 @@ class DMOBGame:
                 break
         if p != -1:
             code = requests.get(url).content.decode("utf-8")
+            if len(code) > 65536:
+                await self.bot.send_message(self.channel, "Please submit a file less than 64KB.")
+                return
             f = open("submissions/" + str(id) + ".code", "w")
             f.write(code)
             f.close()
@@ -92,7 +98,8 @@ class DMOBGame:
         if p == -1:
             await self.bot.send_message(self.channel, "Invalid problem code, `" + problem_code + '`')
             return
-        problem = lists.problem_list[problem_code]
+            
+        problem = database.problem_list[problem_code]
         self.judge.judges.judge(id, problem, judge_lang[user.language], code, user)
         await self.bot.loop.create_task(self.wait_submission_finish(id, self.members.index(ContestPlayer(user,0)), p, problem, submission_time))
 

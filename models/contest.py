@@ -2,7 +2,7 @@ import json
 import sys
 
 from .problem import Problem
-import lists
+import database
 
 class Contest:
     def __init__(self, name, problems):
@@ -29,7 +29,7 @@ class Contest:
             f = open("contests/" + name + ".json","r")
             d = json.loads(f.read())
             f.close()
-            return Contest(d["name"], [lists.problem_list[x] for x in d["problems"]])
+            return Contest(d["name"], [database.problem_list[x] for x in d["problems"]])
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
             print("Not a recognizable contest file, " + str(name) + ".", file=sys.stderr)
 

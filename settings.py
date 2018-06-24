@@ -1,0 +1,6 @@
+BRIDGED_IP_ADDRESS = [('localhost', 9997)]
+COMMAND_PREFIX = "&"
+BOT_COLOUR = 0x4286F4
+DEFAULT_LANG = "cpp11"
+
+DMOBToken = ""

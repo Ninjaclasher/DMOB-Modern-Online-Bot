@@ -6,6 +6,7 @@ from collections import deque
 
 from event_socket_server import ZlibPacketHandler, ProxyProtocolMixin
 from models import SubmissionTestCase, Submission, Judge
+import database
 
 class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
     def __init__(self, server, socket):
@@ -55,7 +56,7 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
         self.server.judges.remove(self)
 
     def _authenticate(self, id, key):
-        return Judge(id, key) in self.server.judge_auth
+        return Judge(id, key) in database.judge_list
 
     def _format_send(self, data):
         return super(JudgeHandler, self)._format_send(json.dumps(data, separators=(',', ':')))

@@ -5,19 +5,12 @@ import time
 from event_socket_server import get_preferred_engine
 from .judgelist import JudgeList
 from models import Judge
+import database
 
 class JudgeServer(get_preferred_engine()):
     def __init__(self, *args, **kwargs):
         super(JudgeServer, self).__init__(*args, **kwargs)
         self.judges = JudgeList()
-        self.judge_auth = []
-        f = open("judges/auth", "r")
-        for x in f.read().split('\n'):
-            try:
-                self.judge_auth.append(Judge(x.split(' ')[0], x.split(' ')[1]))
-            except IndexError:
-                pass
-        f.close()
         self.ping_judge_thread = threading.Thread(target=self.ping_judge, args=())
         self.ping_judge_thread.daemon = True
         self.ping_judge_thread.start()

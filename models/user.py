@@ -1,10 +1,10 @@
+import database
 import json
-import lists
 import sys
 
 class Player:
     def __init__(self,discord_id,points,rank,language,is_admin):
-        self.discord_user = lists.discord_users_list[str(discord_id)]
+        self.discord_user = database.discord_users_list[str(discord_id)]
         self.points = points
         self.rank = rank
         self.language = language

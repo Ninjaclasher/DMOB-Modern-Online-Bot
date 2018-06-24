@@ -1,6 +1,6 @@
 from .user import Player
 from .problem import Problem
-import lists
+import database
 import json
 import sys
 
@@ -27,8 +27,8 @@ class Submission:
     def __hash__(self):
         return self.submission_id
 
-    def is_by(self, user_id):
-        return self.user.discord_user.id == user_id
+    def is_by(self, user):
+        return self.user == user
 
     @property
     def source(self):
@@ -45,7 +45,7 @@ class Submission:
             f = open("submissions/" + str(submission_id) + ".json", "r")
             d = json.loads(f.read())
             f.close()
-            return Submission(d["submission_id"],d["points"],d["total"],d["time"],d["memory"], d["result"], lists.users[str(d["user"])], lists.problem_list[str(d["problem"])])
+            return Submission(d["submission_id"],d["points"],d["total"],d["time"],d["memory"], d["result"], database.users[str(d["user"])], database.problem_list[str(d["problem"])])
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
             print("Not a recognizable submission file, " + str(submission_id) + ".", file=sys.stderr)
 
@@ -73,3 +73,6 @@ class Judge:
 
     def __eq__(self, other):
         return self.id == other.id and self.key == other.key
+
+    def __str__(self):
+        return str(self.id) + " " + str(self.key)

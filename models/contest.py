@@ -2,6 +2,7 @@ import json
 import sys
 
 from .problem import Problem
+import lists
 
 class Contest:
     def __init__(self, name, problems):
@@ -14,7 +15,10 @@ class Contest:
         s.close()
 
     def __str__(self):
-        return ""
+        return self.name
+
+    def __repr__(self):
+        return self.name
 
     def __eq__(self, other):
         return self.name == other.name
@@ -25,16 +29,15 @@ class Contest:
             f = open("contests/" + name + ".json","r")
             d = json.loads(f.read())
             f.close()
-            return Contest(d["name"], [Problem.read(x) for x in d["problems"]])
-        except (FileNotFoundError, KeyError):
-            print("Not a recognizable contest file.", file=sys.stderr)
+            return Contest(d["name"], [lists.problem_list[x] for x in d["problems"]])
+        except (FileNotFoundError, KeyError, json.JSONDecodeError):
+            print("Not a recognizable contest file, " + str(name) + ".", file=sys.stderr)
 
 class ContestPlayer:
-    def __init__(self,user,discord_user,num_problems):
+    def __init__(self,user,num_problems):
         self.user=user
-        self.discord_user=discord_user
         self.problems=[0]*num_problems
         self.time=[0]*num_problems
-
+    
     def __eq__(self,other):
         return self.user == other.user

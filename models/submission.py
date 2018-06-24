@@ -1,9 +1,11 @@
 from .user import Player
+from .problem import Problem
+import lists
 import json
 import sys
 
 class Submission:
-    def __init__(self, submission_id, points, total, time, memory, result, user):
+    def __init__(self, submission_id, points=0.0, total=0.0, time=0.0, memory=0.0, result="IE", user=None, problem=None):
         self.submission_id = submission_id
         self.points = points
         self.total = total
@@ -11,12 +13,22 @@ class Submission:
         self.memory = memory
         self.result = result
         self.user = user
+        self.problem = problem
 
     def __str__(self):
-        return "(Submission " + str(self.submission_id) + ": " + str(self.result) + " " + str(self.points) + "/" + str(self.total) + " - " + str(round(self.time, 3)) + "s, " + str(self.memory) + "KB) by " + self.user.discord_id
+        return "(Submission " + str(self.submission_id) + ": " + str(self.result) + " " + str(self.points) + "/" + str(self.total) + " - " + str(round(self.time, 3)) + "s, " + str(self.memory) + "KB) by " + str(self.user.discord_user)  + " to " + str(self.problem)
 
     def __eq__(self, other):
         return self.submission_id == other.submission_id
+    
+    def __lt__(self, other):
+        return self.submission_id < other.submission_id
+    
+    def __hash__(self):
+        return self.submission_id
+
+    def is_by(self, user_id):
+        return self.user.discord_user.id == user_id
 
     @property
     def source(self):
@@ -33,9 +45,9 @@ class Submission:
             f = open("submissions/" + str(submission_id) + ".json", "r")
             d = json.loads(f.read())
             f.close()
-            return Submission(d["submission_id"],d["points"],d["total"],d["time"],d["memory"], d["result"], Player.read(str(d["user"])))
-        except (FileNotFoundError, KeyError):
-            print("Not a recognizable submission file.", file=sys.stderr)
+            return Submission(d["submission_id"],d["points"],d["total"],d["time"],d["memory"], d["result"], lists.users[str(d["user"])], lists.problem_list[str(d["problem"])])
+        except (FileNotFoundError, KeyError, json.JSONDecodeError):
+            print("Not a recognizable submission file, " + str(submission_id) + ".", file=sys.stderr)
 
 
 class SubmissionTestCase:

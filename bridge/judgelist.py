@@ -74,19 +74,19 @@ class JudgeList(object):
     def check_priority(self, priority):
         return 0 <= priority < self.priorities
 
-    def judge(self, id, problem, time, memory, language, source, user, priority=1):
+    def judge(self, id, problem, language, source, user, priority=1):
         with self.lock:
             if id in self.submission_map:
                 return
-            self.submission_info[id] = user
-            candidates = [judge for judge in self.judges if not judge.working and judge.can_judge(problem, language)]
+            self.submission_info[id] = [user, problem]
+            candidates = [judge for judge in self.judges if not judge.working and judge.can_judge(problem.problem_code, language)]
             if candidates: 
                 judge = min(candidates, key=attrgetter('load'))
                 self.submission_map[id] = judge
                 try:
-                    judge.submit(id, problem, time, memory, language, source)
+                    judge.submit(id, problem.problem_code, problem.time, problem.memory, language, source)
                 except Exception:
                     self.judges.discard(judge)
-                    return self.judge(id, problem, time, memory, language, source, priority)
+                    return self.judge(id, problem.problem_code, problem.time, problem.memory, language, source, priority)
             else:
-                self.queue.insert((id, problem, time, memory, language, source), self.priority[priority])
+                self.queue.insert((id, problem.problem_code, problem.time, problem.memory, language, source), self.priority[priority])

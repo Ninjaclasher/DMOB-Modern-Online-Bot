@@ -5,21 +5,16 @@ import random
 import threading
 import asyncio
 
-from models import Contest, Problem, Player, Submission
 from bridge import JudgeHandler, JudgeServer
 from discord import *
 from DMOBGame import *
+from models import Contest, Problem, Player, Submission
+from sortedcontainers import SortedSet
 from util import *
 
-two_commands = ["contest", "language"]
-contest_list = [Contest.read(x.split(".")[0]) for x in os.listdir("contests") if x.split(".")[1] == "json"]
-problem_list = [Problem.read(x.split(".")[0]) for x in os.listdir("problems")]
-submission_list = [Submission.read(x.split(".")[0]) for x in os.listdir("submissions") if x.split(".")[1] == "json"]
-users = {}
-for x in os.listdir("players"):
-    x = x.split(".")
-    if x[1] == "json":
-        users[x[0]] = Player.read(x[0])
+import lists
+
+two_commands = ["contest", "language", "submissions"]
 
 BRIDGED_IP_ADDRESS = [('localhost', 9997)]
 
@@ -28,6 +23,18 @@ judge = JudgeServer(BRIDGED_IP_ADDRESS, JudgeHandler)
 id = (max(map(int, [x.split(".")[0] for x in os.listdir("submissions")])) if len(os.listdir("submissions")) > 0 else 0) + 1
 lock  = asyncio.Lock()
 
+async def load_lists():
+    for x in os.listdir("problems"):
+        lists.problem_list[x.split(".")[0]] = Problem.read(x.split(".")[0])
+    for x in os.listdir("contests"):
+        lists.contest_list[x.split(".")[0]] = Contest.read(x.split(".")[0])
+    for x in os.listdir("players"):
+        x = x.split(".")
+        if x[1] == "json":
+            lists.discord_users_list[x[0]] = await bot.get_user_info(x[0])
+            lists.users[x[0]] = Player.read(x[0])
+    lists.submission_list = SortedSet([Submission.read(x.split(".")[0]) for x in os.listdir("submissions")], key=lambda x: -x.submission_id)
+
 @bot.event
 async def on_ready():
     print("Logged in as")
@@ -35,6 +42,7 @@ async def on_ready():
     print(bot.user.id)
     print("------")
     threading.Thread(target=judge.serve_forever).start()
+    await load_lists()
 
 games = {}
 
@@ -46,9 +54,9 @@ async def process_command(send, message, command, content):
     except KeyError:
         game = games[message.channel] = DMOBGame(bot, message.channel, judge)
     try:
-        user = users[message.author.id]
+        user = lists.users[message.author.id]
     except KeyError:
-        user = users[message.author.id] = Player(message.author.id,0,0,DEFAULT_LANG,0)
+        user = lists.users[message.author.id] = Player(message.author.id,0,0,DEFAULT_LANG,0)
     if command in two_commands:
         try:
             second_command = content[0].lower()
@@ -72,9 +80,11 @@ async def process_command(send, message, command, content):
             if len(content) < 1:
                 await bot.send_message(message.channel, "Please select a contest to run.")
             else:
-                c = get_element(contest_list, Contest(content[0].lower(), []))
-                if c is None: 
+                try:
+                    c = lists.contest_list[content[0].lower()]
+                except KeyError:
                     await bot.send_message(message.channel, "Please enter a valid contest.")
+                    return
                 try:
                     if int(content[1]) < 1 or int(content[1]) > 31536000:
                         raise ValueError
@@ -84,7 +94,7 @@ async def process_command(send, message, command, content):
             return
         elif second_command == "list":
             em = Embed(title="Contest List", description="List of available contests.", color=BOT_COLOUR)
-            for x in contest_list:
+            for x in lists.contest_list.values():
                 em.add_field(name=x.name, value="\n".join(y.problem_name for y in x.problems))
             await bot.send_message(message.channel, embed=em)
             return
@@ -133,7 +143,27 @@ async def process_command(send, message, command, content):
             'user'   : user,
             'content': content,
         }
-        await call[second_command](info)
+        try:
+            await call[second_command](info)
+        except KeyError:
+            pass
+    elif command == "submissions":
+        call = {
+            'help'   : Submissions.help,
+            'list'   : Submissions.list,
+            'view'   : Submissions.view,
+            'delete' : Submissions.delete,
+        }
+        info = {
+            'bot'    : bot,
+            'channel': message.channel,
+            'user'   : user,
+            'content': content,
+        }
+        try:
+            await call[second_command](info)
+        except KeyError:
+            pass
 
 @bot.event
 async def on_message(message):
@@ -150,13 +180,13 @@ try:
     bot.loop.run_until_complete(bot.start(token))
 except KeyboardInterrupt:
     bot.loop.run_until_complete(bot.logout())
-    for x in users.values():
+    for x in lists.users.values():
         x.save()
-    for x in contest_list:
+    for x in lists.contest_list.values():
         x.save()
-    for x in problem_list:
+    for x in lists.problem_list.values():
         x.save()
-    for x in judge.judges.finished_submissions.values():
+    for x in lists.submission_list:
         x.save()
     judge.stop()
 finally:

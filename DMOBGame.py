@@ -11,12 +11,12 @@ from settings import *
 from util import *
 
 import database
+import handlers
 
 class DMOBGame:
-    def __init__(self, bot, channel, judge):
+    def __init__(self, bot, channel):
         self.channel = channel
         self.bot = bot
-        self.judge = judge
         self.members = []
         self.contest = None
         self.window = 0
@@ -43,7 +43,7 @@ class DMOBGame:
         await self.bot.send_message(self.channel, "Submitting code... please wait")
         while True:
             try:
-                sub = self.judge.judges.finished_submissions[id]
+                sub = database.judgeserver.judges.finished_submissions[id]
                 database.submission_list.add(sub)
                 print(str(sub))
                 score = int(sub.points/float(sub.total)*100) if sub.total > 0 else 0
@@ -54,7 +54,7 @@ class DMOBGame:
                     'content': [str(id)],
                     'description': "Details on your submission to `" + problem.problem_code + "`",
                 }
-                await Submissions.view(info)
+                await handlers.Submissions.view(info)
                 await self.bot.send_message(self.channel, self.members[user_idx].user.discord_user.mention + ", you received a score of " + str(score) + " for your submission to `" + problem.problem_code + "`. Details on your submission have been PM'd to you.")
                 if score > self.members[user_idx].problems[problem_idx]:
                     self.members[user_idx].time[problem_idx] = submission_time-self.start_time
@@ -98,9 +98,8 @@ class DMOBGame:
         if p == -1:
             await self.bot.send_message(self.channel, "Invalid problem code, `" + problem_code + '`')
             return
-            
         problem = database.problem_list[problem_code]
-        self.judge.judges.judge(id, problem, judge_lang[user.language], code, user)
+        database.judgeserver.judges.judge(id, problem, judge_lang[user.language], code, user)
         await self.bot.loop.create_task(self.wait_submission_finish(id, self.members.index(ContestPlayer(user,0)), p, problem, submission_time))
 
     async def start_round(self, contest, window=10800):
@@ -114,17 +113,17 @@ class DMOBGame:
         await self.bot.loop.create_task(self.count_down())
 
     async def display_problem(self, user, problem_code):
-        for x in self.contest.problems:
-            if x.problem_code == problem_code:
-                em = Embed(title="Problem Info", description="`" + problem_code + "` problem info.")
-                em.add_field(name="Problem Name", value=x.problem_name)
-                em.add_field(name="Problem Code", value=x.problem_code)
-                em.add_field(name="Time Limit", value=str(x.time) + "s")
-                em.add_field(name="Memory Limit", value=to_memory(x.memory))
-                await self.bot.send_message(user.discord_user, embed=em)
-                await self.bot.send_file(user.discord_user, x.file)
-                await self.bot.send_message(self.channel, user.discord_user.mention + ", problem statement has been sent to your private messages.")
-                return True
+        if Problem(problem_code) in self.contest.problems:
+            info = {
+                'bot'        : self.bot,
+                'channel'    : self.channel,
+                'user'       : user,
+                'content'    : [problem_code],
+                'description': "Details on problem `" + problem_code + "` in the `" + self.contest.name + "` contest",
+                'is_contest' : True,
+            }
+            await handlers.Problem.view(info)
+            return True
         em = Embed(title="Problems List", description="Problems in the " + self.contest.name + " contest.", color=BOT_COLOUR)
         em.add_field(name="Problem Number", value="\n".join(map(str,range(1,len(self.contest.problems)+1))))
         em.add_field(name="Problem Code", value="\n".join(x.problem_code for x in self.contest.problems))

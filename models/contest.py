@@ -10,9 +10,8 @@ class Contest:
         self.problems = problems
 
     def save(self):
-        s = open("contests/" + self.name + ".json", "w")
-        s.write(str(self.__dict__).replace("'","\""))
-        s.close()
+        with open("contests/" + self.name + ".json", "w") as s:
+            s.write(str(self.__dict__).replace("'","\""))
 
     def __str__(self):
         return self.name

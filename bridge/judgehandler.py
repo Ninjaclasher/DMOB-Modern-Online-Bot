@@ -34,7 +34,7 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
         self.problems = {}
         self.latency = None
         self.time_delta = None
-        self.load = 1e100
+        self.load = None
         self.name = None
         self.batch_id = None
         self.in_batch = False

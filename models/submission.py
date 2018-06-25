@@ -35,9 +35,8 @@ class Submission:
         return open("submissions/" + str(self.submission_id) + ".code", "r").read()
 
     def save(self):
-        s = open("submissions/" + str(self.submission_id) + ".json", "w")
-        s.write(str(self.__dict__).replace("'","\""))
-        s.close()
+        with open("submissions/" + str(self.submission_id) + ".json", "w") as s:
+            s.write(str(self.__dict__).replace("'","\""))
 
     @staticmethod
     def read(submission_id):

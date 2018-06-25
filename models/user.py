@@ -11,9 +11,8 @@ class Player:
         self.is_admin = is_admin
 
     def save(self):
-        s = open("players/" + self.discord_user.id + ".json", "w")
-        s.write(str(self.__dict__).replace(repr(self.__dict__['discord_user']), self.__dict__['discord_user'].id).replace("'","\""))
-        s.close()
+        with open("players/" + self.discord_user.id + ".json", "w") as s:
+            s.write(str(self.__dict__).replace(repr(self.__dict__['discord_user']), self.__dict__['discord_user'].id).replace("'","\""))
 
     def __repr__(self):
         return self.discord_user.id

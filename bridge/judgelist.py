@@ -71,9 +71,6 @@ class JudgeList(object):
         with self.lock:
             self.submission_map[submission].abort()
 
-    def check_priority(self, priority):
-        return 0 <= priority < self.priorities
-
     def judge(self, id, problem, language, source, user, priority=1):
         with self.lock:
             if id in self.submission_map:

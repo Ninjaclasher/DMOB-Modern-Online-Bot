@@ -5,11 +5,12 @@ from sortedcontainers import SortedSet
 
 contest_list = {}
 problem_list = {}
-submission_list = SortedSet()
 discord_users_list = {}
 judge_list = []
 users = {}
 games = {}
+submission_list = None
+judgeserver = None
 
 id = 1
 
@@ -20,22 +21,21 @@ async def load(bot):
     global submission_list
     global discord_users_list
     global users
+ 
     try:
-        f = open("bot.json", "r")
-        d = json.loads(f.read())
-        id = int(d["id"])
-        f.close()
+        with open("bot.json", "r") as f:
+            d = json.loads(f.read())
+            id = int(d["id"])
     except (FileNotFoundError, KeyError, json.JSONDecodeError):
         print("Cannot read the bots settings file. Using defaults.", file=sys.stderr)
     from models import Problem, Contest, Submission, Player, Judge
     try:
-        f = open("judges/auth", "r")
-        for x in f.read().split('\n'):
-            try:
-                judge_list.append(Judge(x.split(' ')[0], x.split(' ')[1]))
-            except IndexError:
-                pass
-        f.close()
+        with open("judges/auth", "r") as f:
+            for x in f.read().split('\n'):
+                try:
+                    judge_list.append(Judge(x.split(' ')[0], x.split(' ')[1]))
+                except IndexError:
+                    pass
     except (FileNotFoundError, KeyError):
         print("Warning: judge authentication keys could not be loaded.", file=sys.stderr)
 
@@ -55,10 +55,9 @@ def save():
     global submission_list
     global judge_list
     global users
-    f = open("bot.json", "w")
-    store = {"id": id}
-    f.write(str(store).replace("'", "\""))
-    f.close()
+    with open("bot.json", "w") as f:
+        store = {"id": id}
+        f.write(str(store).replace("'", "\""))
     for x in users.values():
         x.save()
     for x in contest_list.values():
@@ -67,7 +66,6 @@ def save():
         x.save()
     for x in submission_list:
         x.save()
-    f = open("judges/auth", "w")
-    for x in judge_list:
-        f.write(str(x))
-    f.close()
+    with open("judges/auth", "w") as f:
+        for x in judge_list:
+            f.write(str(x) + "\n")

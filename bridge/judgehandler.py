@@ -34,7 +34,7 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
         self.problems = {}
         self.latency = None
         self.time_delta = None
-        self.load = None
+        self.load = 1e100
         self.name = None
         self.batch_id = None
         self.in_batch = False
@@ -163,7 +163,8 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
     def set_submission(self, id, points, total, time, memory, status_code):
         user = self.server.judges.submission_info[id][0]
         problem = self.server.judges.submission_info[id][1]
-        self.server.judges.finished_submissions[id] = Submission(id, points, total, time, memory, status_code, user, problem)
+        sub_time = self.server.judges.submission_info[id][2]
+        self.server.judges.finished_submissions[id] = Submission(id, points, total, time, memory, status_code, user, problem, sub_time)
 
     def on_grading_end(self, packet):
         time = 0

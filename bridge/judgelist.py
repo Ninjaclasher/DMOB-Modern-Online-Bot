@@ -71,11 +71,11 @@ class JudgeList(object):
         with self.lock:
             self.submission_map[submission].abort()
 
-    def judge(self, id, problem, language, source, user, priority=1):
+    def judge(self, id, problem, language, source, user, sub_time, priority=1):
         with self.lock:
             if id in self.submission_map:
                 return
-            self.submission_info[id] = [user, problem]
+            self.submission_info[id] = [user, problem, sub_time]
             candidates = [judge for judge in self.judges if not judge.working and judge.can_judge(problem.problem_code, language)]
             if candidates: 
                 judge = min(candidates, key=attrgetter('load'))

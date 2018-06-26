@@ -1,3 +1,5 @@
+import time
+
 def plural(num):
     return "s" if num != 1 else ""
 
@@ -14,7 +16,10 @@ def to_time(secs):
         return (str(secs//86400) + " day" + plural(secs//86400) + " " + to_time(secs%86400)).strip()
     elif secs < 2419200:
         return (str(secs//604800) + " week" + plural(secs//604800) + " " + to_time(secs%604800)).strip()
-        
+
+def to_datetime(convert_time):
+    return time.strftime('%h %d, %Y %I:%M:%S %p', time.localtime(convert_time))
+
 def to_memory(kilobyte):
     if kilobyte < 0:
         raise ValueError("Kilobyte cannot be negative.")

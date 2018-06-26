@@ -28,9 +28,8 @@ class Problem:
     @staticmethod
     def read(problem_code):
         try:
-            f = open("problems/" + problem_code + "/" + problem_code + ".json","r")
-            d = json.loads(f.read())
-            f.close()
+            with open("problems/" + problem_code + "/" + problem_code + ".json","r") as f:
+                d = json.loads(f.read())
             return Problem(d["problem_code"],d["problem_name"],d["point_value"],d["time"],d["memory"],d["is_public"])
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
             print("Not a recognizable problem file, " + str(problem_code) + ".", file=sys.stderr)

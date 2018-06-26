@@ -1,11 +1,13 @@
 from .user import Player
 from .problem import Problem
+from util import *
 import database
 import json
 import sys
+import time
 
 class Submission:
-    def __init__(self, submission_id, points=0.0, total=0.0, time=0.0, memory=0.0, result="IE", user=None, problem=None):
+    def __init__(self, submission_id, points=0.0, total=0.0, time=0.0, memory=0.0, result="IE", user=None, problem=None, submission_time=time.time()):
         self.submission_id = submission_id
         self.points = points
         self.total = total
@@ -14,9 +16,10 @@ class Submission:
         self.result = result
         self.user = user
         self.problem = problem
+        self.submission_time=submission_time
 
     def __str__(self):
-        return "(Submission " + str(self.submission_id) + ": " + str(self.result) + " " + str(self.points) + "/" + str(self.total) + " - " + str(round(self.time, 3)) + "s, " + str(self.memory) + "KB) by " + str(self.user.discord_user)  + " to " + str(self.problem)
+        return "(Submission " + str(self.submission_id) + ": " + str(self.result) + " " + str(self.points) + "/" + str(self.total) + " - " + str(round(self.time, 3)) + "s, " + str(self.memory) + "KB) by " + str(self.user.discord_user)  + " to " + str(self.problem) + " at " + to_datetime(self.submission_time)
 
     def __eq__(self, other):
         return self.submission_id == other.submission_id
@@ -41,10 +44,9 @@ class Submission:
     @staticmethod
     def read(submission_id):
         try:
-            f = open("submissions/" + str(submission_id) + ".json", "r")
-            d = json.loads(f.read())
-            f.close()
-            return Submission(d["submission_id"],d["points"],d["total"],d["time"],d["memory"], d["result"], database.users[str(d["user"])], database.problem_list[str(d["problem"])])
+            with open("submissions/" + str(submission_id) + ".json", "r") as f:
+                d = json.loads(f.read())
+            return Submission(d["submission_id"],d["points"],d["total"],d["time"],d["memory"], d["result"], database.users[str(d["user"])], database.problem_list[str(d["problem"])], d["submission_time"])
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
             print("Not a recognizable submission file, " + str(submission_id) + ".", file=sys.stderr)
 

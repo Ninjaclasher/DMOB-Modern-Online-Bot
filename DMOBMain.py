@@ -1,15 +1,12 @@
-import math
 import sys
 import os
-import random
 import threading
 
 from bridge import JudgeHandler, JudgeServer
 from discord import *
 from DMOBGame import *
-from models import Contest, Problem, Player, Submission
+from models import Player
 from settings import *
-from sortedcontainers import SortedSet
 from util import *
 
 import database
@@ -35,6 +32,7 @@ async def process_command(message, command, content):
     try:
         user = database.users[message.author.id]
     except KeyError:
+        database.discord_users_list[message.author.id] = await bot.get_user_info(message.author.id)
         user = database.users[message.author.id] = Player(message.author.id,0,0,DEFAULT_LANG,0)
 
     if command in help_list.keys():
@@ -53,6 +51,8 @@ async def process_command(message, command, content):
         'message': message,
     }
 
+    if "__" in second_command:
+        return
     if command == "help":
         em = Embed(title="Help",description="Available commands from DMOB", color=BOT_COLOUR)
         for key, value in help_list[""].items():
@@ -62,62 +62,18 @@ async def process_command(message, command, content):
     elif command == "contest":
         requires_contest_running = ["join", "rankings", "info", "end", "submit", "problem"]
         requires_in_contest = ["submit", "problem"]
-        call = {
-            'help'    : handlers.Contest.help,
-            'list'    : handlers.Contest.list,
-            'start'   : handlers.Contest.start,
-            'join'    : handlers.Contest.join,
-            'rankings': handlers.Contest.rankings,
-            'info'    : handlers.Contest.info,
-            'end'     : handlers.Contest.end,
-            'submit'  : handlers.Contest.submit,
-            'problem' : handlers.Contest.problem,
-        }
         info['game'] = game
         if second_command in requires_contest_running and not await game.check_contest_running():
             return
         elif second_command in requires_in_contest and not await game.in_contest(user): 
             await bot.send_message(message.channel, "You are not in this contest! Please join first.")
             return
-    elif command == "problem":
-        call = {
-            'help'   : handlers.Problem.help,
-            'list'   : handlers.Problem.list,
-            'view'   : handlers.Problem.view,
-            'add'    : handlers.Problem.add,
-            'make'   : handlers.Problem.make,
-            'change' : handlers.Problem.change,
-            'delete' : handlers.Problem.delete,
-        }
-    elif command == "language":
-        call = {
-            'help'   : handlers.Language.help,
-            'list'   : handlers.Language.list,
-            'change' : handlers.Language.change,
-            'current': handlers.Language.current,
-        }
-    elif command == "submissions":
-        call = {
-            'help'   : handlers.Submissions.help,
-            'list'   : handlers.Submissions.list,
-            'view'   : handlers.Submissions.view,
-            'code'   : handlers.Submissions.code,
-            'delete' : handlers.Submissions.delete,
-        }
-    elif command == "judge":
-        call = {
-            'help'   : handlers.Judge.help,
-            'list'   : handlers.Judge.list,
-            'view'   : handlers.Judge.view,
-            'add'    : handlers.Judge.add,
-            'delete' : handlers.Judge.delete,
-        }
-    if command not in help_list.keys():
-        return
-    try:
-        await call[second_command](info)
-    except KeyError:
-        pass
+    if command in help_list.keys():
+        try:
+            call = getattr(handlers, command.capitalize())
+            await getattr(call, second_command)(info)
+        except AttributeError:
+            pass
 
 @bot.event
 async def on_message(message):

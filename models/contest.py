@@ -25,9 +25,8 @@ class Contest:
     @staticmethod
     def read(name):
         try:
-            f = open("contests/" + name + ".json","r")
-            d = json.loads(f.read())
-            f.close()
+            with open("contests/" + name + ".json","r") as f:
+                d = json.loads(f.read())
             return Contest(d["name"], [database.problem_list[x] for x in d["problems"]])
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
             print("Not a recognizable contest file, " + str(name) + ".", file=sys.stderr)

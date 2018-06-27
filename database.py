@@ -1,6 +1,10 @@
+import asyncio
 import json
 import os
 import sys
+import threading
+from collections import defaultdict
+from settings import *
 from sortedcontainers import SortedSet
 
 contest_list = {}
@@ -9,6 +13,7 @@ discord_users_list = {}
 judge_list = []
 users = {}
 games = {}
+locks = {}
 submission_list = None
 judgeserver = None
 
@@ -21,13 +26,18 @@ async def load(bot):
     global submission_list
     global discord_users_list
     global users
- 
+    global judgeserver 
+    global locks
     try:
         with open("bot.json", "r") as f:
             d = json.loads(f.read())
             id = int(d["id"])
     except (FileNotFoundError, KeyError, json.JSONDecodeError):
         print("Cannot read the bots settings file. Using defaults.", file=sys.stderr)
+    locks["problem"] = defaultdict(lambda: asyncio.Lock())
+    locks["submissions"] = defaultdict(lambda: asyncio.Lock())
+    locks["judge"] = defaultdict(lambda: asyncio.Lock())
+    from bridge import JudgeHandler, JudgeServer
     from models import Problem, Contest, Submission, Player, Judge
     try:
         with open("judges/auth", "r") as f:
@@ -39,6 +49,8 @@ async def load(bot):
     except (FileNotFoundError, KeyError):
         print("Warning: judge authentication keys could not be loaded.", file=sys.stderr)
 
+    judgeserver = JudgeServer(BRIDGED_IP_ADDRESS, JudgeHandler)
+    threading.Thread(target=judgeserver.serve_forever).start()
     problem_list = {x.split(".")[0] : Problem.read(x.split(".")[0]) for x in os.listdir("problems")}
     contest_list = {x.split(".")[0] : Contest.read(x.split(".")[0]) for x in os.listdir("contests")}
     for x in os.listdir("players"):
@@ -48,13 +60,22 @@ async def load(bot):
             users[x[0]] = Player.read(x[0])
     submission_list = SortedSet([Submission.read(x.split(".")[0]) for x in os.listdir("submissions") if x.split(".")[1] == "json"], key=lambda x: -x.submission_id)
 
-def save():
+async def save():
     global id
     global problem_list
     global contest_list
     global submission_list
     global judge_list
     global users
+    global judgeserver
+    global locks
+
+    for x in locks.values():
+        for y in x.values():
+            with await y:
+                pass
+    
+    judgeserver.stop()
     with open("bot.json", "w") as f:
         store = {"id": id}
         f.write(str(store).replace("'", "\""))

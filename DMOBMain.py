@@ -1,8 +1,6 @@
 import sys
 import os
-import threading
 
-from bridge import JudgeHandler, JudgeServer
 from discord import *
 from DMOBGame import *
 from models import Player
@@ -20,9 +18,8 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print("------")
-    database.judgeserver = JudgeServer(BRIDGED_IP_ADDRESS, JudgeHandler)
     await database.load(bot)
-    threading.Thread(target=database.judgeserver.serve_forever).start()
+    print("Database loaded.")
 
 async def process_command(message, command, content):
     try:
@@ -34,7 +31,7 @@ async def process_command(message, command, content):
     except KeyError:
         database.discord_users_list[message.author.id] = await bot.get_user_info(message.author.id)
         user = database.users[message.author.id] = Player(message.author.id,0,0,DEFAULT_LANG,0)
-
+    
     if command in help_list.keys():
         try:
             second_command = content[0].lower()
@@ -42,7 +39,8 @@ async def process_command(message, command, content):
         except IndexError:
             await bot.send_message(message.channel, "Please enter a subcommand.")
             return
-
+    else:
+        second_command = ""
     info = {
         'bot'    : bot,
         'channel': message.channel,
@@ -50,7 +48,8 @@ async def process_command(message, command, content):
         'content': content,
         'message': message,
     }
-
+    
+    #No code injection for you
     if "__" in second_command:
         return
     if command == "help":
@@ -84,13 +83,10 @@ async def on_message(message):
         command = stripped_message[0]
         await process_command(message, command, stripped_message[1:])
 
-token = DMOBToken
-
 try:
-    bot.loop.run_until_complete(bot.start(token))
+    bot.loop.run_until_complete(bot.start(DMOBToken))
 except KeyboardInterrupt:
     bot.loop.run_until_complete(bot.logout())
-    database.save()
-    database.judgeserver.stop()
+    bot.loop.run_until_complete(database.save())
 finally:
     bot.loop.close()

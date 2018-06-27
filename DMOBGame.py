@@ -5,8 +5,8 @@ import time
 import threading
 
 
-from models import Problem, ContestPlayer
 from discord import *
+from models import Problem, ContestPlayer, ContestSubmission
 from settings import *
 from util import *
 
@@ -21,6 +21,10 @@ class DMOBGame:
         self.contest = None
         self.window = 0
         self.start_time = 0
+
+    def __repr__(self):
+        return self.channel.id
+
     def reset(self):
         self.start_time = 0
         self.window = 0
@@ -43,10 +47,9 @@ class DMOBGame:
         await self.bot.send_message(self.channel, "Submitting code... please wait")
         while True:
             try:
-                sub = database.judgeserver.judges.finished_submissions[id]
+                sub = ContestSubmission(self, *database.judgeserver.judges.finished_submissions[id].__dict__.values())
                 database.submission_list.add(sub)
                 print(str(sub))
-                score = int(sub.points/float(sub.total)*100) if sub.total > 0 else 0
                 info = {
                     'bot'    : self.bot,
                     'channel': author.user.discord_user,
@@ -55,10 +58,8 @@ class DMOBGame:
                     'description': "Details on your submission to `" + problem.problem_code + "`",
                 }
                 await handlers.Submissions.view(info)
-                await self.bot.send_message(self.channel, author.user.discord_user.mention + ", you received a score of " + str(score) + " for your submission to `" + problem.problem_code + "`. Details on your submission have been PM'd to you.")
-                if score > author.problems[problem_idx]:
-                    author.time[problem_idx] = submission_time-self.start_time
-                    author.problems[problem_idx] = score
+                await self.bot.send_message(self.channel, author.user.discord_user.mention + ", you received a score of " + str(sub.score) + " for your submission to `" + problem.problem_code + "`. Details on your submission have been PM'd to you.")
+                author.submissions[problem_idx].append(sub)
                 break
             except KeyError:
                 pass
@@ -69,6 +70,7 @@ class DMOBGame:
             await self.bot.send_message(self.channel, message)
             return False
         return True
+    
     async def in_contest(self,user):
         return ContestPlayer(user,0) in self.members
     
@@ -127,14 +129,14 @@ class DMOBGame:
             await self.bot.send_message(self.channel, embed=em)
     
     async def rankings(self):
-        self.members.sort(key=lambda x: [sum(x.problems), -sum(x.time)],reverse=True)
+        self.members.sort(key=lambda x: x.total_score,reverse=True)
         em = Embed(title="Rankings",description="The current rankings for this contest.", color=BOT_COLOUR)
         if len(self.members) != 0:
             names = "\n".join([str(x.user.discord_user)[:20] for x in self.members])
             em.add_field(name="Name", value=names)
-            curvalue = "\n".join("`"+"".join("{:5s}".format(str(z)) for z in y.problems)+"`" for y in self.members)
+            curvalue = "\n".join("`"+"".join("{:5s}".format(str(z.score)) for z in y.best_submissions)+"`" for y in self.members)
             em.add_field(name="Problem Scores", value=curvalue)
-            score_sum = "\n".join(str(sum(y.problems)) for y in self.members)
+            score_sum = "\n".join(str(sum(z.score for z in y.best_submissions)) for y in self.members)
             em.add_field(name="Total", value=score_sum)
         else:
             em.add_field(name="The contest is empty", value="No one has joined the contest yet.")

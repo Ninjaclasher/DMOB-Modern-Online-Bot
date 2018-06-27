@@ -41,6 +41,12 @@ def delete_elements(arr, delete):
         arr.remove(x)
     return arr
 
+async def has_perm(bot, channel, user, message, alternate_condition=True):
+    if not user.is_admin and alternate_condition:
+        await bot.send_message(channel, "You do not have permission to " + message + ".")
+        return False
+    return True
+
 from settings import *
 
 help_list = {}
@@ -114,16 +120,30 @@ judge_lang = {
 dmob_lang = {y:x for x, y in judge_lang.items()}
 
 verdicts = {
-    'AC': 'Accepted',
-    'WA': 'Wrong Answer',
-    'TLE': 'Time Limit Exceeded',
-    'MLE': 'Memory Limit Exceeded',
-    'OLE': 'Output Limit Exceeded',
-    'IR': 'Invalid Return',
-    'RTE': 'Runtime Error',
-    'CE': 'Compile Error',
-    'IE': 'Internal Error',
-    'SC': 'Short circuit',
-    'AB': 'Aborted',
+    'AC'    : 'Accepted',
+    'WA'    : 'Wrong Answer',
+    'TLE'   : 'Time Limit Exceeded',
+    'MLE'   : 'Memory Limit Exceeded',
+    'OLE'   : 'Output Limit Exceeded',
+    'IR'    : 'Invalid Return',
+    'RTE'   : 'Runtime Error',
+    'CE'    : 'Compile Error',
+    'IE'    : 'Internal Error',
+    'SC'    : 'Short circuit',
+    'AB'    : 'Aborted',
+}
+
+verdict_colours = {
+    'AC'    : 0x53F23F,
+    'WA'    : 0xEF1B32,
+    'TLE'   : 0x0C0C0C,
+    'MLE'   : 0x0C0C0C,
+    'OLE'   : 0xFAB623,
+    'IR'    : 0xFAB623,
+    'RTE'   : 0xFAB623,
+    'CE'    : 0x0C0C0C,
+    'IE'    : 0xFF0000,
+    'SC'    : 0x0C0C0C,
+    'AB'    : 0x0C0C0C,
 }
 

@@ -12,27 +12,30 @@ import handlers
 
 bot = Client()
 
+loading_database = False
+
 @bot.event
 async def on_ready():
     print("Logged in as")
     print(bot.user.name)
     print(bot.user.id)
     print("------")
+    loading_database = True
     await database.load(bot)
-    print("Database loaded.")
+    loading_database = False
+    print("Database loaded")
 
 async def process_command(message, command, content):
+    if loading_database:
+        await bot.send_message(message.channel, "Bot has not loaded. Please wait...")
+        return
     try:
         game = database.games[message.channel]
     except KeyError:
         game = database.games[message.channel] = DMOBGame(bot, message.channel)
-    try:
-        user = database.users[message.author.id]
-    except KeyError:
-        database.discord_users_list[message.author.id] = await bot.get_user_info(message.author.id)
-        user = database.users[message.author.id] = Player(message.author.id,0,0,DEFAULT_LANG,0)
+    user = await database.load_user(bot, message.author.id)
     
-    if command in help_list.keys():
+    if command in help_list.keys() and command != "":
         try:
             second_command = content[0].lower()
             del content[0]
@@ -70,7 +73,7 @@ async def process_command(message, command, content):
     if command in help_list.keys():
         try:
             call = getattr(handlers, command.capitalize())
-            await getattr(call, second_command)(info)
+            await getattr(call(), second_command)(info)
         except AttributeError:
             pass
 
@@ -87,6 +90,8 @@ try:
     bot.loop.run_until_complete(bot.start(DMOBToken))
 except KeyboardInterrupt:
     bot.loop.run_until_complete(bot.logout())
+    print("Saving database....")
     bot.loop.run_until_complete(database.save())
+    print("Database saved")
 finally:
     bot.loop.close()

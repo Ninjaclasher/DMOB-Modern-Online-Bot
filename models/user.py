@@ -26,9 +26,9 @@ class Player:
     @staticmethod
     def read(discord_id):
         try:
-            with open("players/" + discord_id + ".json","r") as f:
+            with open("players/{}.json".format(discord_id),"r") as f:
                 d = json.loads(f.read())
             return Player(d["discord_user"],d["points"],d["rank"],d["language"],d["is_admin"])
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
-            print("Not a recognizable user file, " + str(discord_id) + ".", file=sys.stderr)
+            print("Not a recognizable user file, {}.".format(discord_id), file=sys.stderr)
 

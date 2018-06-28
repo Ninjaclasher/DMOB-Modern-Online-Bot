@@ -1,21 +1,14 @@
+from .BaseHandler import BaseHandler
 from discord import *
 from util import *
 import database
 import models
 
-class Judge:
-    @staticmethod
-    async def help(info):
-        em = Embed(title="Judge Help",description="Available Judge commands from DMOB", color=BOT_COLOUR)
-        for key, value in help_list["judge"].items():
-            em.add_field(name=COMMAND_PREFIX + "judge " + key, value=value)
-        await info['bot'].send_message(info['channel'], embed=em)
-
-    @staticmethod
-    async def list(info):
+class Judge(BaseHandler):
+    async def list(self, info):
         online_judges = [x.name for x in database.judgeserver.judges.judges]
         offline_judges = [x for x in database.judge_list if x.id not in online_judges] if info['user'].is_admin else []
-        judge_name = ["✓ " + x for x in online_judges] + [x.id for x in offline_judges]
+        judge_name = ["✓ {}".format(x) for x in online_judges] + [x.id for x in offline_judges]
         judge_ping = [str(round(x.latency,3)) if x.latency is not None else "N/A" for x in database.judgeserver.judges.judges] + ["N/A"]*len(offline_judges)
         judge_load = [str(round(x.load, 3)) if x.latency is not 1e100 else "N/A" for x in database.judgeserver.judges.judges] + ["N/A"]*len(offline_judges)
         
@@ -25,8 +18,7 @@ class Judge:
         em.add_field(name="Load", value="\n".join(judge_load))
         await info['bot'].send_message(info['channel'], embed=em)
     
-    @staticmethod
-    async def view(info):
+    async def view(self, info):
         online_judges = [x.name.lower() for x in database.judgeserver.judges.judges]
         try:
             judge_name = info['content'][0].lower()
@@ -35,9 +27,9 @@ class Judge:
             return
         with await database.locks["judge"][judge_name]:
             if judge_name not in [x.id.lower() for x in database.judge_list]:
-                await info['bot'].send_message(info['channel'], "Judge with name `" + info['content'][0] + "` does not exist.")
+                await info['bot'].send_message(info['channel'], "Judge with name `{}` does not exist.".format(info['content'][0]))
                 return
-            em = Embed(title="Judge Info", description=judge_name.capitalize() + " Details", color=BOT_COLOUR)
+            em = Embed(title="Judge Info", description="{} Details".format(judge_name.capitalize()), color=BOT_COLOUR)
             fields = {
                     "Judge Name": ("✓ " if judge_name in online_judges else "") + judge_name.capitalize(),
                     "Ping"      : "N/A",
@@ -55,8 +47,7 @@ class Judge:
                 em.add_field(name=x, value=y)
             await info['bot'].send_message(info['channel'], embed=em)    
     
-    @staticmethod
-    async def add(info):
+    async def add(self, info):
         if not await has_perm(info['bot'], info['channel'], info['user'], "add judges"):
             return
         try:
@@ -68,13 +59,12 @@ class Judge:
         with await database.locks["judge"][judge_name]:
             await info['bot'].delete_message(info['message'])
             if judge_name.lower() in [x.id.lower() for x in database.judge_list]:
-                await info['bot'].send_message(info['channel'], "Judge with name `" + judge_name + "` already exists.")
+                await info['bot'].send_message(info['channel'], "Judge with name `{}` already exists.".format(judge_name))
                 return
             database.judge_list.append(models.Judge(judge_name, judge_key))
-            await info['bot'].send_message(info['channel'], "Judge `" + judge_name + "` successfully added!")
+            await info['bot'].send_message(info['channel'], "Judge `{}` successfully added!".format(judge_name))
 
-    @staticmethod
-    async def delete(info):
+    async def delete(self, info):
         if not await has_perm(info['bot'], info['channel'], info['user'], "delete judges"):
             return
         try:
@@ -84,9 +74,9 @@ class Judge:
             return
         with await database.locks["judge"][judge_name]:
             if not judge_name.lower() in [x.id.lower() for x in database.judge_list]:
-                await info['bot'].send_message(info['channel'], "Judge with name `" + judge_name + "` does not exist.")
+                await info['bot'].send_message(info['channel'], "Judge with name `{}` does not exist.".format(judge_name))
                 return
             for x in range(len(database.judge_list)):
                 if database.judge_list[x].id.lower() == judge_name.lower():
                     del database.judge_list[x]
-            await info['bot'].send_message(info['channel'], "Judge `" + judge_name + "`successfully deleted!")
+            await info['bot'].send_message(info['channel'], "Judge `{}` successfully deleted!".format(judge_name))

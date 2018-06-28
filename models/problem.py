@@ -12,7 +12,7 @@ class Problem:
 
     @property
     def file(self):
-        return "problems/" + self.problem_code + "/" + self.problem_code + ".pdf"
+        return "problems/{0}/{0}.pdf".format(self.problem_code)
 
     def save(self):
         with open("problems/" + self.problem_code + "/" + self.problem_code + ".json", "w") as s:
@@ -23,13 +23,13 @@ class Problem:
     def __str__(self):
         return self.problem_code
     def __repr__(self):
-        return "\"" + self.problem_code + "\""
+        return "\"{}\"".format(self.problem_code)
 
     @staticmethod
     def read(problem_code):
         try:
-            with open("problems/" + problem_code + "/" + problem_code + ".json","r") as f:
+            with open("problems/{0}/{0}.json".format(problem_code),"r") as f:
                 d = json.loads(f.read())
             return Problem(d["problem_code"],d["problem_name"],d["point_value"],d["time"],d["memory"],d["is_public"])
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
-            print("Not a recognizable problem file, " + str(problem_code) + ".", file=sys.stderr)
+            print("Not a recognizable problem file, {}.".format(problem_code), file=sys.stderr)

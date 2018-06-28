@@ -1,3 +1,4 @@
+from .BaseHandler import BaseHandler
 from discord import *
 from util import *
 import asyncio
@@ -5,23 +6,17 @@ import database
 
 lock = asyncio.Lock()
 
-class Contest:
-    @staticmethod
-    async def help(info):
-        em = Embed(title="Contest Help",description="Available Contest commands from DMOB", color=BOT_COLOUR)
-        for key, value in help_list["contest"].items():
-            em.add_field(name=COMMAND_PREFIX + "contest " + key, value=value)
-        await info['bot'].send_message(info['channel'], embed=em)
-
-    @staticmethod
-    async def list(info):
-        em = Embed(title="Contest List", description="List of available contests.", color=BOT_COLOUR)
-        for x in database.contest_list.values():
+class Contest(BaseHandler):
+    async def list(self, info):
+        current_list, page_num = await get_current_list(info, list(database.contest_list.values()))
+        if current_list is None:
+            return
+        em = Embed(title="Contests",description="Contest page {}".format(page_num), color=BOT_COLOUR)
+        for x in current_list:
             em.add_field(name=x.name, value="\n".join(y.problem_name for y in x.problems))
         await info['bot'].send_message(info['channel'], embed=em)
 
-    @staticmethod
-    async def start(info):
+    async def start(self, info):
         if len(info['content']) < 1:
             await info['bot'].send_message(info['channel'], "Please select a contest to run.")
         else:
@@ -38,26 +33,21 @@ class Contest:
             except (IndexError, ValueError):
                 await info['game'].start_round(c)
 
-    @staticmethod
-    async def join(info):
+    async def join(self, info):
         await info['game'].join(info['user'])
 
-    @staticmethod
-    async def rankings(info):
+    async def rankings(self, info):
         await info['game'].rankings()
 
-    @staticmethod
-    async def info(info):
+    async def info(self, info):
         await info['game'].info()
 
-    @staticmethod
-    async def end(info):
+    async def end(self, info):
         if not await has_perm(info['bot'], info['channel'], info['user'], "forcefully end contests"):
             return
         await info['game'].end_round()
 
-    @staticmethod
-    async def submit(info):
+    async def submit(self, info):
         global lock
         if len(info['message'].attachments) != 1:
             await info['bot'].send_message(info['channel'], "Please upload one file for judging.")
@@ -69,7 +59,5 @@ class Contest:
                 database.id += 1
             await info['game'].submit(info['message'], info['user'], info['content'][0], info['message'].attachments[0]["url"], this_id)
 
-
-    @staticmethod
-    async def problem(info):
+    async def problem(self, info):
         await info['game'].display_problem(info['user'], info['content'][0].strip().lower() if len(info['content']) > 0 else " ")

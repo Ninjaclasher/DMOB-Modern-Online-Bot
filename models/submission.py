@@ -19,8 +19,8 @@ class Submission:
         self.submission_time=submission_time
 
     def __str__(self):
-        return "(Submission " + str(self.submission_id) + ": " + str(self.result) + " " + str(self.points) + "/" + str(self.total) + " - " + str(round(self.time, 3)) + "s, " + str(self.memory) + "KB) by " + str(self.user.discord_user)  + " to " + str(self.problem) + " at " + to_datetime(self.submission_time)
-
+        return "(Submission {0}: {1} {2}/{3} - {4}s, {5}) by {6} to {7} at {8}".format(self.submission_id, self.result, self.points, self.total, round(self.time, 3), to_memory(self.memory), self.user.discord_user, self.problem, to_datetime(self.submission_time))
+    
     def __eq__(self, other):
         return self.submission_id == other.submission_id
     
@@ -35,7 +35,7 @@ class Submission:
 
     @property
     def source(self):
-        return open("submissions/" + str(self.submission_id) + ".code", "r").read()
+        return open("submissions/{}.code".format(self.submission_id), "r").read()
 
     def save(self):
         with open("submissions/" + str(self.submission_id) + ".json", "w") as s:
@@ -44,12 +44,11 @@ class Submission:
     @staticmethod
     def read(submission_id):
         try:
-            with open("submissions/" + str(submission_id) + ".json", "r") as f:
+            with open("submissions/{}.json".format(submission_id), "r") as f:
                 d = json.loads(f.read())
             return Submission(d["submission_id"],d["points"],d["total"],d["time"],d["memory"], d["result"], database.users[str(d["user"])], database.problem_list[str(d["problem"])], d["submission_time"])
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
-            print("Not a recognizable submission file, " + str(submission_id) + ".", file=sys.stderr)
-
+            print("Not a recognizable submission file, {}.".format(submission_id), file=sys.stderr)
 
 class SubmissionTestCase:
     def __init__(self, submission_id, case):
@@ -76,4 +75,4 @@ class Judge:
         return self.id == other.id and self.key == other.key
 
     def __str__(self):
-        return str(self.id) + " " + str(self.key)
+        return "{0} {1}".format(self.id, self.key)

@@ -19,6 +19,17 @@ judgeserver = None
 
 id = 1
 
+async def load_user(bot, user_id):
+    global users
+    global discord_users_list
+    try:
+        return users[user_id]
+    except KeyError:
+        discord_users_list[user_id] = await bot.get_user_info(user_id)
+        from models import Player
+        users[user_id] = Player(user_id,0,0,DEFAULT_LANG,0)
+        return users[user_id]
+
 async def load(bot):
     global id
     global problem_list
@@ -37,6 +48,7 @@ async def load(bot):
     locks["problem"] = defaultdict(lambda: asyncio.Lock())
     locks["submissions"] = defaultdict(lambda: asyncio.Lock())
     locks["judge"] = defaultdict(lambda: asyncio.Lock())
+    locks["user"] = defaultdict(lambda: asyncio.Lock())
     from bridge import JudgeHandler, JudgeServer
     from models import Problem, Contest, Submission, Player, Judge
     try:
@@ -89,4 +101,4 @@ async def save():
         x.save()
     with open("judges/auth", "w") as f:
         for x in judge_list:
-            f.write(str(x) + "\n")
+            f.write("{}\n".format(x))

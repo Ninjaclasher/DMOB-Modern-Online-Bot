@@ -141,8 +141,9 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
             else:
                 handler = self.handlers.get(data['name'], self.on_malformed)
                 handler(data)
-        except IndentationError:
+        except:
             self._packet_exception()
+            raise
 
     def _packet_exception(self):
         pass

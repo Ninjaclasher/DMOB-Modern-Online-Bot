@@ -13,7 +13,7 @@ def to_time(secs):
         return "{0} second{1}".format(secs, plural(secs))
     else:
         for x in range(len(names)-1):
-            if secs >= names[x][0] and secs < names[x+1][0]:
+            if names[x][0] <= secs < names[x+1][0]:
                 return "{0} {1}{2} {3}".format(secs//names[x][0], names[x][1], plural(secs//names[x][0]), to_time(secs%names[x][0])).strip()
 
 def to_datetime(convert_time):
@@ -40,9 +40,10 @@ def delete_elements(arr, delete):
         arr.remove(x)
     return arr
 
-async def has_perm(bot, channel, user, message, alternate_condition=True):
+async def has_perm(bot, channel, user, message, alternate_condition=True, no_perm_message=True):
     if not user.is_admin and alternate_condition:
-        await bot.send_message(channel, "You do not have permission to {}.".format(message))
+        if no_perm_message:
+             await bot.send_message(channel, "You do not have permission to {}.".format(message))
         return False
     return True
 
@@ -71,6 +72,8 @@ help_list[""] = {
 }
 help_list["contest"] = {
     "help"                                  : "Displays this message.",
+    "add (contest name) (problem codes)"    : "Creates a contest with (problem codes) set of problems.",
+    "delete (contest name)"                 : "Deletes a problem.",
     "start (contest name) [time window]"    : "Starts a contest for the specified amount of time. Defaults to 3 hours.",
     "end"                                   : "Ends the contest.",
     "list [page number]"                    : "Lists the available contests.",
@@ -111,9 +114,10 @@ help_list["judge"] = {
 }
 help_list["user"] = {
     "help"                                  : "Displays this message.",
+    "list [page number]"                    : "Lists all users with a non-zero point value.",
+    "view (user)"                           : "Views details on a user.",
     "make {admin, normal} (user)"           : "Make a user an admin or a normal user.",
     "reset (user)"                          : "Resets a user to the default values.",
-    "list [page number]"                    : "Lists all users with a non-zero point value.",
 }
 
 unchangeable_problem_fields = ["problem_code", "is_public"]
@@ -163,3 +167,26 @@ verdict_colours = {
     'AB'    : 0x0C0C0C,
 }
 
+ranking_titles = [
+    [0, "Unrated"],
+    [1, "Newbie"],
+    [1000, "Amateur"],
+    [1200, "Expert"],
+    [1500, "Candidate Master"],
+    [1800, "Master"],
+    [2200, "Grandmaster"],
+    [3000, "Hacker"],
+    [10**10, ""],
+]
+
+ranking_colour = {
+    "Unrated"           : 0xFFFFFF,
+    None                : 0xFFFFFF,
+    "Newbie"            : 0x909090,
+    "Amateur"           : 0x00A900,
+    "Expert"            : 0x0000FF,
+    "Candidate Master"  : 0x800080,
+    "Master"            : 0xFFB100,
+    "Grandmaster"       : 0x0E0000,
+    "Hacker"            : 0xFF0000,
+}

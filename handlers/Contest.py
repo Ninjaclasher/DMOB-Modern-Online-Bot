@@ -3,6 +3,8 @@ from discord import *
 from util import *
 import asyncio
 import database
+import models
+import os
 
 lock = asyncio.Lock()
 
@@ -15,6 +17,55 @@ class Contest(BaseHandler):
         for x in current_list:
             em.add_field(name=x.name, value="\n".join(y.problem_name for y in x.problems))
         await info['bot'].send_message(info['channel'], embed=em)
+    
+    async def add(self, info):
+        if not await has_perm(info['bot'], info['channel'], info['user'], "add contests"):
+            return
+        content = info['content']
+        try:
+            contest_name = content[0]
+            if contest_name in database.contest_list.keys():
+                raise ValueError
+        except IndexError:
+            await info['bot'].send_message(info['channel'], "Please enter a contest name.");
+            return
+        except ValueError:
+            await info['bot'].send_message(info['channel'], "Contest with name `{}` already exists.".format(contest_name))
+            return
+        for x in content[1:]:
+            if x not in database.problem_list.keys():
+                await info['bot'].send_message(info['channel'], "Problem `{}` does not exists. The contest cannot be created.".format(x))
+                return
+        if len(content) == 1:
+            await info['bot'].send_message(info['channel'], "Cannot create an empty contest!")
+        elif len(content[1:]) != len(set(content[1:])):
+            await info['bot'].send_message(info['channel'], "Cannot create contest with duplicate problems.")
+        elif len(content) > 8:
+            await info['bot'].send_message(info['channel'], "Cannot create a contest with more than 8 problems.")
+        else:
+            database.contest_list[contest_name] = models.Contest(contest_name, [database.problem_list[x] for x in content[1:]])
+            await info['bot'].send_message(info['channel'], "Contest `{}` successfully created!".format(contest_name))
+
+    async def delete(self, info):
+        if not await has_perm(info['bot'], info['channel'], info['user'], "delete contests"):
+            return
+        content = info['content']
+        try:
+            contest_name = content[0]
+            if contest_name not in database.contest_list.keys():
+                raise ValueError
+        except IndexError:
+            await info['bot'].send_message(info['channel'], "Please enter a contest name.")
+            return
+        except ValueError:
+            await info['bot'].send_message(info['channel'], "Contest `{}` does not exist.".format(contest_name))
+            return
+        del database.contest_list[contest_name]
+        try:
+            os.remove("contests/{}.json".format(contest_name))
+        except FileNotFoundError:
+            pass
+        await info['bot'].send_message(info['channel'], "Contest `{}` sucessfully deleted.".format(contest_name))
 
     async def start(self, info):
         if len(info['content']) < 1:

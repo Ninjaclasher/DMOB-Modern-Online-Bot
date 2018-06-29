@@ -3,6 +3,7 @@ from __future__ import division
 import json
 import time
 from collections import deque
+from sortedcontainers import SortedSet
 
 from event_socket_server import ZlibPacketHandler, ProxyProtocolMixin
 from models import SubmissionTestCase, Submission, Judge
@@ -43,7 +44,6 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
 
         self.server.schedule(15, self._kill_if_no_auth)
 
-        self.cases = []
 
     def _kill_if_no_auth(self):
         if self._to_kill:
@@ -141,7 +141,7 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
             else:
                 handler = self.handlers.get(data['name'], self.on_malformed)
                 handler(data)
-        except:
+        except IndentationError:
             self._packet_exception()
 
     def _packet_exception(self):
@@ -157,7 +157,6 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
             self.server.judges.update_problems(self)
 
     def on_grading_begin(self, packet):
-        self.cases = []
         self.batch_id = None
     
     def set_submission(self, id, points, total, time, memory, status_code):
@@ -175,7 +174,7 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
         status_codes = ['SC', 'AC', 'WA', 'MLE', 'TLE', 'IR', 'RTE', 'OLE']
         batches = {}  # batch number: (points, total)
 
-        for case in self.cases:
+        for case in database.submission_cases_list[packet['submission-id']]:
             time += case.time
             if not case.batch:
                 points += case.points
@@ -196,8 +195,8 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
         points = round(points, 1)
         total = round(total, 1)
         self.set_submission(packet['submission-id'], points, total, time, memory, status_codes[status])
-        self._free_self(packet)
         self.batch_id = None
+        self._free_self(packet)
 
     def on_compile_error(self, packet):
         self.set_submission(packet['submission-id'], 0.0, 0.0, 0, 0, 'CE')
@@ -205,6 +204,7 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
 
     def on_compile_message(self, packet):
         pass
+    
     def on_internal_error(self, packet):
         self.set_submission(packet['submission-id'], 0.0, 0.0, 0, 0, 'IE')
         self._free_self(packet)
@@ -246,10 +246,10 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
         test_case.memory = packet['memory']
         test_case.points = packet['points']
         test_case.total = packet['total-points']
-        test_case.batch = self.batch_id if self.in_batch else None
-        test_case.feedback = (packet.get('feedback', None) or '')[:max_feedback]
-        test_case.output = packet['output']
-        self.cases.append(test_case)
+        test_case.batch = self.batch_id if self.in_batch else -1
+        #test_case.feedback = (packet.get('feedback', None) or '')[:max_feedback]
+        #test_case.output = packet['output']
+        database.submission_cases_list[id].add(test_case)
     
     def on_malformed(self, packet):
         pass

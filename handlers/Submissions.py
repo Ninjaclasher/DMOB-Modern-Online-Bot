@@ -17,6 +17,15 @@ async def get_submission(self, info):
         await info['bot'].send_message(info['channel'], "Please enter a submission id.")
     return None
 
+def batched(cases):
+    ret = {}
+    for x in cases:
+        try:
+            ret[x.batch].append(x)
+        except KeyError:
+            ret[x.batch] = [x]
+    return [list(x) for x in ret.values() if len(x) > 0]
+
 class Submissions(BaseHandler):
     async def list(self, info):
         current_list, page_num = await get_current_list(info, database.submission_list)
@@ -46,6 +55,27 @@ class Submissions(BaseHandler):
             em.add_field(name="Total Running Time", value="{}s".format(round(sub.time,4)))
             em.add_field(name="Memory Usage", value=to_memory(sub.memory))
             await info['bot'].send_message(info['channel'], embed=em)
+            if not await has_perm(info['bot'], info['channel'], info['user'], "view submission #{}".format(sub.submission_id), not sub.is_by(info['user']), False):
+                return
+
+            num_per_embed = 20
+            embeds = []
+            for x in batched(database.submission_cases_list[sub.submission_id]):
+                values = ["`Case #{0: >3}: {1: >3}{2}`".format(i, y.status if y.status != "SC" else "--", "{0: >8}s, {1: >8}]".format("[{:.3f}".format(round(y.time, 3)), to_memory(y.memory)) if y.status != "SC" else "") for i,y in enumerate(x, 1)]
+                name = "Batch #{}".format(x[0].batch) if x[0].batch != -1 else "Test Cases"
+                if len(values) > num_per_embed:
+                    chunked = [values[x:x+num_per_embed] for x in range(0, len(values), num_per_embed)]
+                    for i, y in enumerate(chunked, 1):
+                        em = Embed(title="Submission Cases", description=description, color=verdict_colours[sub.result])
+                        em.add_field(name="{0} Part {1}".format(name, i), value="\n".join(y))
+                        embeds.append(em)
+                else:
+                    em = Embed(title="Submission Cases", description=description, color=verdict_colours[sub.result])
+                    em.add_field(name=name, value="\n".join(values))
+                    embeds.append(em)
+            with await database.locks["user"][info['user'].discord_user.id]:
+                for x in embeds:
+                    await info['bot'].send_message(info['user'].discord_user, embed=em)
 
     async def code(self, info):
         sub = await get_submission(self, info)
@@ -55,7 +85,7 @@ class Submissions(BaseHandler):
             if not await has_perm(info['bot'], info['channel'], info['user'], "view submission #{}".format(sub.submission_id), not sub.is_by(info['user'])):
                 return
             await info['bot'].send_message(info['user'].discord_user, "Code preview:\n```\n{}\n```\n".format(sub.source[:1900]))
-            await info['bot'].send_file(info['user'].discord_user, "submissions/{}.code".format(sub.submission_id))
+            await info['bot'].send_file(info['user'].discord_user, "submissions/{0}/{0}.code".format(sub.submission_id))
             await info['bot'].send_message(info['channel'], "{} The code has been sent to your private messages.".format(info['user'].discord_user.mention))
 
     async def delete(self, info):
@@ -66,5 +96,5 @@ class Submissions(BaseHandler):
             if not await has_perm(info['bot'], info['channel'], info['user'], "delete submission #{}".format(sub.submission_id)):
                 return
             database.submission_list.remove(sub)
-            os.system("mv submissions/{}.* deleted_submissions/".format(sub.submission_id))
+            os.system("mv submissions/{} deleted_submissions/".format(sub.submission_id))
             await info['bot'].send_message(info['channel'], "Successfully deleted submission #{}".format(sub.submission_id))

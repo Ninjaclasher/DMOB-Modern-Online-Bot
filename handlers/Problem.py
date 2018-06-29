@@ -25,7 +25,7 @@ class Problem(BaseHandler):
         ["new value", "The new value for the field specified."],
     ]
     async def list(self, info):
-        current_list, page_num = await get_current_list(info, list(database.problem_list.values()), 30)
+        current_list, page_num = await get_current_list(info, list(database.problem_list.values()), 35)
         current_list.sort(key = lambda x: x.problem_name)
         if current_list is None:
             return
@@ -71,15 +71,15 @@ class Problem(BaseHandler):
     async def add(self, info):
         if not await has_perm(info['bot'], info['channel'], info['user'], "add problems"):
             return
-        try:
-            content = info['content']
-            if len(content) == 1 and content[0].lower() == "help":
-                em = Embed(title="Problem Adding Help", description="Details on how to add a problem.", color=BOT_COLOUR)
-                for x in Problem().command_help["add"]:
-                    em.add_field(name=x[0], value=x[1])
-                await info['bot'].send_message(info['channel'], embed=em)
-                return
+        content = info['content']
+        if len(content) == 1 and content[0].lower() == "help":
+            em = Embed(title="Problem Adding Help", description="Details on how to add a problem.", color=BOT_COLOUR)
+            for x in Problem().command_help["add"]:
+                em.add_field(name=x[0], value=x[1])
+            await info['bot'].send_message(info['channel'], embed=em)
+            return
 
+        try:
             if len(info['message'].attachments) != 1:
                 await info['bot'].send_message(info['channel'], "Please upload one file for the problem statement.")
                 return 
@@ -101,14 +101,14 @@ class Problem(BaseHandler):
     async def change(self, info):
         if not await has_perm(info['bot'], info['channel'], info['user'], "change problems"):
             return
+        content = info['content']
+        if len(content) == 1 and content[0].lower() == "help":
+            em = Embed(title="Problem Changing Help", description="Details on how to change a problem.", color=BOT_COLOUR)
+            for x in Problem().command_help["change"]:
+                em.add_field(name=x[0], value=x[1])
+            await info['bot'].send_message(info['channel'], embed=em)
+            return
         try:
-            content = info['content']
-            if len(content) == 1 and content[0].lower() == "help":
-                em = Embed(title="Problem Changing Help", description="Details on how to change a problem.", color=BOT_COLOUR)
-                for x in Problem().command_help["change"]:
-                    em.add_field(name=x[0], value=x[1])
-                await info['bot'].send_message(info['channel'], embed=em)
-                return
             problem_code = content[0].lower()
             field = content[1].lower()
         except (KeyError, ValueError, IndexError):

@@ -12,21 +12,17 @@ import handlers
 
 bot = Client()
 
-loading_database = False
-
 @bot.event
 async def on_ready():
     print("Logged in as")
     print(bot.user.name)
     print(bot.user.id)
     print("------")
-    loading_database = True
     await database.load(bot)
-    loading_database = False
     print("Database loaded")
 
 async def process_command(message, command, content):
-    if loading_database:
+    if database.loading:
         await bot.send_message(message.channel, "Bot has not loaded. Please wait...")
         return
     try:
@@ -87,8 +83,11 @@ async def on_message(message):
         await process_command(message, command, stripped_message[1:])
 
 try:
+    database.loading = True
     bot.loop.run_until_complete(bot.start(DMOBToken))
 except KeyboardInterrupt:
+    while database.loading:
+        pass
     bot.loop.run_until_complete(bot.logout())
     print("Saving database....")
     bot.loop.run_until_complete(database.save())

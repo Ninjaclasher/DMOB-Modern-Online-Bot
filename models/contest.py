@@ -3,6 +3,7 @@ import sys
 
 from .problem import Problem
 from .submission import Submission
+
 import database
 
 class Contest:
@@ -33,16 +34,18 @@ class Contest:
             print("Not a recognizable contest file, {}.".format(name), file=sys.stderr)
 
 class ContestPlayer:
-    def __init__(self,user,num_problems):
+    def __init__(self,user,problems=[]):
         self.user=user
-        self.submissions=[[] for x in range(num_problems)]
-    
+        self.submissions={}
+        for x in problems:
+            self.submissions[x.problem_code] = []
+
     def __eq__(self,other):
         return self.user == other.user
 
     @property
     def best_submissions(self):
-        return [max(x, default=ContestSubmission(None, -1, 0.0, 0.0, 0, 0, "UK", None, None, 0), key=lambda y: [y.score, -y.submission_time]) for x in self.submissions]
+        return [max(x, default=ContestSubmission(None, -1, 0.0, 0.0, 0, 0, "UK", None, None, 0), key=lambda y: [y.score, -y.submission_time]) for x in self.submissions.values()]
 
     @property
     def total_score(self):

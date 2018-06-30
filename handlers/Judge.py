@@ -3,6 +3,8 @@ from discord import *
 from util import *
 import database
 import models
+import os
+import threading
 
 class Judge(BaseHandler):
     async def list(self, info):
@@ -80,3 +82,43 @@ class Judge(BaseHandler):
                 if database.judge_list[x].id.lower() == judge_name.lower():
                     del database.judge_list[x]
             await info['bot'].send_message(info['channel'], "Judge `{}` successfully deleted!".format(judge_name))
+
+    async def start(self, info):
+        if not await has_perm(info['bot'], info['channel'], info['user'], "start judges"):
+            return
+        try:
+            judge_name = info['content'][0]
+            if judge_name not in [x.id for x in database.judge_list]:
+                raise IndexError
+        except IndexError:
+            await info['bot'].send_message(info['channel'], "Please enter a valid judge name.")
+            return
+        
+        with await database.locks["judge"][judge_name]:
+            if judge_name in [x.name for x in database.judgeserver.judges]:
+                await info['bot'].send_message(info['channel'], "Judge `{}` is already running.".format(judge_name))
+                return
+            threading.Thread(target=os.system, args=("screen -dmS judge bash -c \"dmoj -p {1} -c judges/{2}.yml {0}\"".format(*BRIDGED_IP_ADDRESS[0], judge_name), )).start()
+            await info['bot'].send_message(info['channel'], "Judge `{}` has been started".format(judge_name))
+
+    async def stop(self, info):
+        if not await has_perm(info['bot'], info['channel'], info['user'], "stop judges"):
+            return
+        try:
+            judge_name = info['content'][0]
+            if judge_name not in [x.id for x in database.judge_list]:
+                raise IndexError
+            elif judge_name not in [x.name for x in database.judgeserver.judges]:
+                raise KeyError
+        except IndexError:
+            await info['bot'].send_message(info['channel'], "Please enter a valid judge name.")
+            return
+        except KeyError:
+            await info['bot'].send_message(info['channel'], "Judge `{}` is not running.".format(judge_name))
+            return
+        
+        with await database.locks["judge"][judge_name]:
+            #TODO
+            return
+            await info['bot'].send_message(info['channel'], "Judge `{}` has been forcefully stopped.".format(judge_name))
+

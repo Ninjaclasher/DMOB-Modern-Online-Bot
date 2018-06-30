@@ -1,4 +1,5 @@
 import sys
+import time
 import os
 
 from discord import *
@@ -34,12 +35,13 @@ async def process_command(message, command, content):
     if command in help_list.keys() and command != "":
         try:
             second_command = content[0].lower()
+            #No code injection for you
+            if "__" in second_command:
+                return
             del content[0]
         except IndexError:
             await bot.send_message(message.channel, "Please enter a subcommand.")
             return
-    else:
-        second_command = ""
     info = {
         'bot'    : bot,
         'channel': message.channel,
@@ -48,9 +50,6 @@ async def process_command(message, command, content):
         'message': message,
     }
     
-    #No code injection for you
-    if "__" in second_command:
-        return
     if command == "help":
         em = Embed(title="Help",description="Available commands from DMOB", color=BOT_COLOUR)
         for key, value in help_list[""].items():
@@ -87,7 +86,7 @@ try:
     bot.loop.run_until_complete(bot.start(DMOBToken))
 except KeyboardInterrupt:
     while database.loading:
-        pass
+        time.sleep(0.2)
     bot.loop.run_until_complete(bot.logout())
     print("Saving database....")
     bot.loop.run_until_complete(database.save())

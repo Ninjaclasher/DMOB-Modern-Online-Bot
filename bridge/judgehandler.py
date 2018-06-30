@@ -44,7 +44,6 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
 
         self.server.schedule(15, self._kill_if_no_auth)
 
-
     def _kill_if_no_auth(self):
         if self._to_kill:
             self.close()
@@ -143,13 +142,10 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
                 handler(data)
         except:
             self._packet_exception()
-            raise
 
     def _packet_exception(self):
-        pass
-
-    def _submission_is_batch(self, id):
-        pass
+        import traceback
+        traceback.print_exc()
 
     def on_supported_problems(self, packet):
         self._problems = packet['problems']
@@ -217,7 +213,6 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
         self.in_batch = True
         if self.batch_id is None:
             self.batch_id = 0
-            self._submission_is_batch(packet['submission-id'])
         self.batch_id += 1
 
     def on_batch_end(self, packet):

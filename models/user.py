@@ -1,13 +1,15 @@
 import database
 import json
 import sys
+from bisect import bisect
 from util import *
 
 class Player:
-    def __init__(self,discord_id,points,rank,language,is_admin):
+    def __init__(self,discord_id,points=0,rank=[],volatility=385,language=DEFAULT_LANG,is_admin=0):
         self.discord_user = database.discord_users_list[str(discord_id)]
         self.points = points
         self.rank = rank
+        self.volatility = volatility
         self.language = language
         self.is_admin = is_admin
 
@@ -16,17 +18,27 @@ class Player:
             s.write(str(self.__dict__).replace(repr(self.__dict__['discord_user']), self.__dict__['discord_user'].id).replace("'","\""))
 
     @property
+    def rating(self):
+        return 1200 if not self.rated else self.rank[-1]
+
+    @property
     def rank_title(self):
-        for x in range(len(ranking_titles)-1):
-            if ranking_titles[x][0] <= self.rank < ranking_titles[x+1][0]:
-                return ranking_titles[x][1]
-        return None
+        if not self.rated:
+            return RANKING_TITLES[0]
+        return RANKING_TITLES[bisect(RANKING_VALUES, self.rank[-1])-1]
+    
+    @property
+    def rank_colour(self):
+        if not self.rated:
+            return RANKING_COLOUR[0]
+        return RANKING_COLOUR[bisect(RANKING_VALUES, self.rank[-1])-1]
+            
+    @property
+    def rated(self):
+        return len(self.rank) > 0
 
     def __repr__(self):
         return self.discord_user.id
-
-    def __str__(self):
-        return "ID: {}, Points: {}, Rank: {}".format(self.discord_user.id,self.points,self.rank)
 
     def __eq__(self, other):
         return self.discord_user.id == other.discord_user.id
@@ -36,7 +48,7 @@ class Player:
         try:
             with open("players/{}.json".format(discord_id),"r") as f:
                 d = json.loads(f.read())
-            return Player(d["discord_user"],d["points"],d["rank"],d["language"],d["is_admin"])
+            return Player(d["discord_user"],d["points"],d["rank"],d["volatility"], d["language"],d["is_admin"])
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
             print("Not a recognizable user file, {}.".format(discord_id), file=sys.stderr)
 

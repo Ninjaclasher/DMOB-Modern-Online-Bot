@@ -1,5 +1,6 @@
 import database
 import json
+import os
 import sys
 import time
 from .user import Player
@@ -44,7 +45,6 @@ class Submission:
     
     @staticmethod
     def prepare_save(id):
-        import os
         if not os.path.isdir("submissions/{}".format(id)):
             os.mkdir("submissions/{}".format(id))
         if not os.path.isdir("submissions/{}/cases".format(id)):

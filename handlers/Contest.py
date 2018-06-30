@@ -1,12 +1,10 @@
 from .BaseHandler import BaseHandler
+from .Problem import Problem
 from discord import *
 from util import *
-import asyncio
 import database
 import models
 import os
-
-lock = asyncio.Lock()
 
 class Contest(BaseHandler):
     async def list(self, info):
@@ -80,9 +78,9 @@ class Contest(BaseHandler):
                 time_limit = int(info['content'][1])
                 if time_limit < 1 or time_limit > 31536000:
                     raise ValueError
-                await info['game'].start_round(c, time_limit)
+                await info['game'].start_round(c, info['user'], time_limit)
             except (IndexError, ValueError):
-                await info['game'].start_round(c)
+                await info['game'].start_round(c, info['user'])
 
     async def join(self, info):
         await info['game'].join(info['user'])
@@ -99,16 +97,7 @@ class Contest(BaseHandler):
         await info['game'].end_round()
 
     async def submit(self, info):
-        global lock
-        if len(info['message'].attachments) != 1:
-            await info['bot'].send_message(info['channel'], "Please upload one file for judging.")
-        elif len(info['content']) != 1:
-            await info['bot'].send_message(info['channel'], "Please select a problem to submit the code to.")
-        else:
-            with await lock:
-                this_id = database.id
-                database.id += 1
-            await info['game'].submit(info['message'], info['user'], info['content'][0], info['message'].attachments[0]["url"], this_id)
+        await Problem().submit(info, contest=info['game'])
 
     async def problem(self, info):
         await info['game'].display_problem(info['user'], info['content'][0].strip().lower() if len(info['content']) > 0 else " ")

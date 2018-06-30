@@ -37,14 +37,14 @@ class Submissions(BaseHandler):
             em.add_field(name="Submission #{}".format(x.submission_id), value='\n'.join(values))
         await info['bot'].send_message(info['channel'], embed=em)
 
-    async def view(self, info):
+    async def view(self, info, live_submission=False):
         sub = await get_submission(self, info)
         if sub is None:
             return
         with await database.locks["submissions"][sub.submission_id]:
-            try:
+            if live_submission:
                 description = info['description']
-            except KeyError:
+            else:
                 description = "Details on submission #{}".format(info['content'][0])
             em = Embed(title="Submission Details", description=description, color=verdict_colours[sub.result])
             em.add_field(name="Problem Name", value=sub.problem.problem_name)

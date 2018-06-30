@@ -1,3 +1,4 @@
+import math
 import time
 
 def plural(num):
@@ -39,6 +40,76 @@ def delete_elements(arr, delete):
     for x in delete:
         arr.remove(x)
     return arr
+
+def rational_approximation(t):
+    c = [2.515517, 0.802853, 0.010328]
+    d = [1.432788, 0.189269, 0.001308]
+    numerator = (c[2] * t + c[1]) * t + c[0]
+    denominator = ((d[2] * t + d[1]) * t + d[0]) * t + 1.0
+    return t - numerator / denominator
+
+def normal_CDF_inverse(p):
+    assert 0.0 < p < 1
+    if p < 0.5:
+        return -rational_approximation(math.sqrt(-2.0 * math.log(p)))
+    else:
+        return rational_approximation(math.sqrt(-2.0 * math.log(1.0 - p)))
+
+def WP(RA, RB, VA, VB):
+    return (math.erf((RB - RA) / math.sqrt(2 * (VA * VA + VB * VB))) + 1) / 2.0
+
+def recalculate_ratings(old_rating, old_volatility, actual_rank, times_rated):
+    # actual_rank: 1 is first place, N is last place
+    # if there are ties, use the average of places (if places 2, 3, 4, 5 tie, use 3.5 for all of them)
+
+    N = len(old_rating)
+    new_rating = old_rating[:]
+    new_volatility = old_volatility[:]
+    if N <= 1:
+        return new_rating, new_volatility
+
+    ave_rating = float(sum(old_rating)) / N
+    sum1 = sum(i * i for i in old_volatility) / N
+    sum2 = sum((i - ave_rating) ** 2 for i in old_rating) / (N - 1)
+    CF = math.sqrt(sum1 + sum2)
+
+    for i in range(N):
+        ERank = 0.5
+        for j in range(N):
+            ERank += WP(old_rating[i], old_rating[j], old_volatility[i], old_volatility[j])
+
+        EPerf = -normal_CDF_inverse((ERank - 0.5) / N)
+        APerf = -normal_CDF_inverse((actual_rank[i] - 0.5) / N)
+        PerfAs = old_rating[i] + CF * (APerf - EPerf)
+        Weight = 1.0 / (1 - (0.42 / (times_rated[i] + 1) + 0.18)) - 1.0
+        if old_rating[i] > 2500:
+            Weight *= 0.8
+        elif old_rating[i] >= 2000:
+            Weight *= 0.9
+
+        Cap = 150.0 + 1500.0 / (times_rated[i] + 2)
+
+        if times_rated[i] == 0:
+            new_volatility[i] = 385
+        else:
+            new_volatility[i] = math.sqrt(((new_rating[i] - old_rating[i]) ** 2) / Weight + (old_volatility[i] ** 2) / (Weight + 1))
+        new_rating[i] = (old_rating[i] + Weight * PerfAs) / (1.0 + Weight)
+        if abs(old_rating[i] - new_rating[i]) > Cap:
+            if old_rating[i] < new_rating[i]:
+                new_rating[i] = old_rating[i] + Cap
+            else:
+                new_rating[i] = old_rating[i] - Cap
+
+    # try to keep the sum of ratings constant
+    adjust = float(sum(old_rating) - sum(new_rating)) / N
+    new_rating = list(map(adjust.__add__, new_rating))
+    # inflate a little if we have to so people who placed first don't lose rating
+    best_rank = min(actual_rank)
+    for i in range(N):
+        if abs(actual_rank[i] - best_rank) <= 1e-3 and new_rating[i] < old_rating[i] + 1:
+            new_rating[i] = old_rating[i] + 1
+    return list(map(int, map(round, new_rating))), list(map(int, map(round, new_volatility)))
+
 
 async def has_perm(bot, channel, user, message, alternate_condition=True, no_perm_message=True):
     if not user.is_admin and alternate_condition:
@@ -88,9 +159,10 @@ help_list["problem"] = {
     "list [page number]"                    : "Lists a page of problems",
     "view (problem code)"                   : "Views details on a problem",
     "add (problem values)"                  : "Adds a problem. Please do `" + COMMAND_PREFIX + "problem add help` for details on how to use this command.",
-    'change (problem code) (field to change) (new value)': "Change a problem. Please do `" + COMMAND_PREFIX + "problem change help` for details on how to use this command.",
+    "change (problem code) (field to change) (new value)": "Change a problem. Please do `" + COMMAND_PREFIX + "problem change help` for details on how to use this command.",
     "make {public, private} (problem_code)" : "Make a problem private/public to normal users.",
-    'delete (problem code)'                 : "Deletes a problem.",
+    "delete (problem code)"                 : "Deletes a problem.",
+    "submit (problem code)"                 : "Submit to a problem.",
 }
 help_list["language"] = {
     "help"                                  : "Displays this message.",
@@ -111,6 +183,8 @@ help_list["judge"] = {
     "view (judge name)"                     : "Views details on a judge.",
     "add (judge name) (judge key)"          : "Adds a judge.",
     "delete (judge name)"                   : "Deletes a judge.",
+    "start (judge name)"                    : "Starts a judge.",
+    "stop (juge name)"                      : "Stops a judge.",
 }
 help_list["user"] = {
     "help"                                  : "Displays this message.",
@@ -167,26 +241,6 @@ verdict_colours = {
     'AB'    : 0x0C0C0C,
 }
 
-ranking_titles = [
-    [0, "Unrated"],
-    [1, "Newbie"],
-    [1000, "Amateur"],
-    [1200, "Expert"],
-    [1500, "Candidate Master"],
-    [1800, "Master"],
-    [2200, "Grandmaster"],
-    [3000, "Hacker"],
-    [10**10, ""],
-]
-
-ranking_colour = {
-    "Unrated"           : 0xFFFFFF,
-    None                : 0xFFFFFF,
-    "Newbie"            : 0x909090,
-    "Amateur"           : 0x00A900,
-    "Expert"            : 0x0000FF,
-    "Candidate Master"  : 0x800080,
-    "Master"            : 0xFFB100,
-    "Grandmaster"       : 0x0E0000,
-    "Hacker"            : 0xFF0000,
-}
+RANKING_TITLES = ["Unrated", "Newbie", "Amateur", "Expert", "Candidate Master", "Master", "Grandmaster", "Hacker"]
+RANKING_VALUES = [0, 1, 1000, 1200, 1500, 1800, 2200, 3000]
+RANKING_COLOUR = [0xFFFFFF, 0x909090, 0x00A900, 0x0000FF, 0x800080, 0xFFB100, 0x0E0000, 0xFF0000]

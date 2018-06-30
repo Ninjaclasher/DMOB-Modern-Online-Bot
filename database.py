@@ -29,7 +29,7 @@ async def load_user(bot, user_id):
     except KeyError:
         discord_users_list[user_id] = await bot.get_user_info(user_id)
         from models import Player
-        users[user_id] = Player(user_id,0,0,DEFAULT_LANG,0)
+        users[user_id] = Player(user_id)
         return users[user_id]
 
 async def load(bot):
@@ -54,6 +54,7 @@ async def load(bot):
     locks["submissions"] = defaultdict(lambda: asyncio.Lock())
     locks["judge"] = defaultdict(lambda: asyncio.Lock())
     locks["user"] = defaultdict(lambda: asyncio.Lock())
+    locks["contest"] = defaultdict(lambda: asyncio.Lock())
     from bridge import JudgeHandler, JudgeServer
     from models import Problem, Contest, Submission, SubmissionTestCase, Player, Judge
     try:

@@ -11,10 +11,6 @@ class Contest:
         self.name = name
         self.problems = problems
 
-    def save(self):
-        with open("contests/" + self.name + ".json", "w") as s:
-            s.write(str(self.__dict__).replace("'","\""))
-
     def __str__(self):
         return self.name
 
@@ -23,6 +19,10 @@ class Contest:
 
     def __eq__(self, other):
         return self.name == other.name
+
+    def save(self):
+        with open("contests/" + self.name + ".json", "w") as s:
+            s.write(str(self.__dict__).replace("'","\""))
 
     @staticmethod
     def read(name):

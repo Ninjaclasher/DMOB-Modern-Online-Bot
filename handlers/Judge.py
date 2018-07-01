@@ -3,8 +3,16 @@ from discord import *
 from util import *
 import database
 import models
+import multiprocessing
 import os
-import threading
+import sys
+
+def run_judge(judge_name):
+    sys.argv = ["python -m dmoj"] + "-p {1} -c judges/{2}.yml {0}".format(*BRIDGED_IP_ADDRESS[0], judge_name).split(" ")
+    sys.stderr = open("judges/{}.log".format(judge_name), "a")
+    sys.stdout = sys.stderr
+    import dmoj.judge
+    dmoj.judge.main()
 
 class Judge(BaseHandler):
     async def list(self, info):
@@ -42,7 +50,7 @@ class Judge(BaseHandler):
                 for x in database.judgeserver.judges.judges:
                     if x.name.lower() == judge_name:
                         fields["Ping"] = round(x.latency, 3) if x.latency is not None else "N/A"
-                        fields["Load"] = round(x.load, 3) if x.load is not 1e100 else "N/A"
+                        fields["Load"] = round(x.load, 3) if x.load < 1e10 else "N/A"
                         fields["Supported Languages"] = ", ".join(dmob_lang[y] for y in x.executors.keys() if y in dmob_lang.keys())
                         break
             for x, y in fields.items():
@@ -95,10 +103,11 @@ class Judge(BaseHandler):
             return
         
         with await database.locks["judge"][judge_name]:
-            if judge_name in [x.name for x in database.judgeserver.judges]:
+            if judge_name in database.judges.keys():
                 await info['bot'].send_message(info['channel'], "Judge `{}` is already running.".format(judge_name))
                 return
-            threading.Thread(target=os.system, args=("screen -dmS judge bash -c \"dmoj -p {1} -c judges/{2}.yml {0}\"".format(*BRIDGED_IP_ADDRESS[0], judge_name), )).start()
+            database.judges[judge_name] = multiprocessing.Process(target=run_judge, args=(judge_name,))
+            database.judges[judge_name].start()
             await info['bot'].send_message(info['channel'], "Judge `{}` has been started".format(judge_name))
 
     async def stop(self, info):
@@ -108,7 +117,7 @@ class Judge(BaseHandler):
             judge_name = info['content'][0]
             if judge_name not in [x.id for x in database.judge_list]:
                 raise IndexError
-            elif judge_name not in [x.name for x in database.judgeserver.judges]:
+            elif judge_name not in database.judges.keys():
                 raise KeyError
         except IndexError:
             await info['bot'].send_message(info['channel'], "Please enter a valid judge name.")
@@ -118,7 +127,7 @@ class Judge(BaseHandler):
             return
         
         with await database.locks["judge"][judge_name]:
-            #TODO
-            return
+            database.judges[judge_name].terminate()
+            del database.judges[judge_name]
             await info['bot'].send_message(info['channel'], "Judge `{}` has been forcefully stopped.".format(judge_name))
 

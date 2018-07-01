@@ -194,7 +194,7 @@ help_list["user"] = {
     "reset (user)"                          : "Resets a user to the default values.",
 }
 
-unchangeable_problem_fields = ["problem_code", "is_public"]
+unchangeable_problem_fields = {"problem_code", "is_public"}
 
 judge_lang = {
     "c"         : "C",

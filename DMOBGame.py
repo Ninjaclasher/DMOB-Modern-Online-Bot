@@ -18,6 +18,7 @@ class DMOBGame:
         self.bot = bot
         self.members = []
         self.contest = None
+        self.finished_submissions = []
         self.running_submissions = set()
         self.window = 0
         self.start_time = 0
@@ -36,22 +37,43 @@ class DMOBGame:
     def reset(self):
         self.start_time = 0
         self.window = 0
+        self.finished_submissions = []
+        self.running_submissions = set()
         self.members = []
         self.contest = None
 
+    async def release_submissions(self):
+        for x in self.finished_submissions:
+            database.submission_list.add(x)
+            x.user._submissions.add(x.submission_id)
+        for x in self.members:
+            await x.user.update_points()    
+
     def update_ratings(self):
         self.update_score()
-        old_rating = [x.user.rating for x in self.members]
-        old_volatility = [x.user.volatility for x in self.members]
-        actual_rank = list(range(1,len(self.members)+1))
-        times_rated = [len(x.user.rank) for x in self.members]
+        rated_members = [x for x in self.members if any(map(len, x.submissions.values()))]
+        old_rating = [x.user.rating for x in rated_members]
+        old_volatility = [x.user.volatility for x in rated_members]
+        actual_rank = list(range(1,len(rated_members)+1))
+        times_rated = [len(x.user.rank) for x in rated_members]
         new_rating, new_volatility = recalculate_ratings(old_rating, old_volatility, actual_rank, times_rated)
-        for x in range(len(self.members)):
-            self.members[x].user.rank.append(new_rating[x])
-            self.members[x].user.volatility = new_volatility[x]
+        for x in range(len(rated_members)):
+            rated_members[x].user.rank.append(new_rating[x])
+            rated_members[x].user.volatility = new_volatility[x]
 
     def update_score(self):
         self.members.sort(key=lambda x: x.total_score,reverse=True)
+
+    async def on_start_submission(self, id):
+        self.running_submissions.add(id)
+
+    async def on_finish_submission(self, sub):
+        msg = "{0}, you received a score of {1} for your submission to `{2}`. Details on your submission have been PM'd to you."
+        await self.bot.send_message(self.channel, msg.format(sub.user.discord_user.mention, sub.score, sub.problem.problem_code))
+        self.finished_submissions.append(sub)
+        get_element(self.members, ContestPlayer(sub.user)).submissions[sub.problem.problem_code].append(sub)
+        self.update_score()
+        self.running_submissions.remove(sub.submission_id)
 
     async def count_down(self):
         announce_time = [1209600,604800,86400,43600,21600,7200,3600,1800,600,300,60,30,10,5,-1]
@@ -69,6 +91,7 @@ class DMOBGame:
                 await asyncio.sleep(0.5)
         try:
             self.update_ratings()
+            await self.release_submissions()
             await self.rankings()
         except:
             import traceback
@@ -95,7 +118,7 @@ class DMOBGame:
             await self.bot.send_message(self.channel, "You have joined the contest!")
 
     async def start_round(self, contest, user, window=10800):
-        if contest_running:
+        if self.contest_running:
             await self.bot.send_message(self.channel, "There is already a contest runnning in this channel. Please wait until the contest is over.")
             return
         self.contest = contest
@@ -142,4 +165,4 @@ class DMOBGame:
         await self.bot.send_message(self.channel,embed=em)
 
     async def end_round(self):
-       self.window = 0
+        self.window = 0

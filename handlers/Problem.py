@@ -9,31 +9,28 @@ import os
 import requests
 import time
 
-async def wait_submission_finish(bot, channel, id, user, problem_code, contest):
+async def wait_submission_finish(bot, channel, id, user, contest):
     if contest is not None:
-        contest.running_submissions.add(id)
+        await contest.on_start_submission(id)
     while True:
         try:
             sub = database.judgeserver.judges.finished_submissions[id]
-            with await database.locks["submission"][id]:
+            with await database.locks["submissions"][id]:
                 if contest is not None:
                     sub = models.ContestSubmission(contest, *sub.__dict__.values())
-                database.submission_list.add(sub)
+                    await contest.on_finish_submission(sub)
+                else:
+                    database.submission_list.add(sub)
+                    sub.user._submissions.add(sub.submission_id)
+                    await sub.user.update_points()
                 print(sub)
-                info = {
-                    'bot'    : bot,
-                    'channel': channel if contest is None else user.discord_user,
-                    'user'   : user,
-                    'content': [str(id)],
-                    'description': "Details on your submission to `{}`".format(problem_code),
-                }
-                await handlers.Submissions().view(info, live_submission=True)
-            if contest is not None:
-                msg = "{0}, you received a score of {1} for your submission to `{2}`. Details on your submission have been PM'd to you."
-                await bot.send_message(channel, msg.format(user.discord_user.mention, sub.score, problem_code))
-                get_element(contest.members, models.ContestPlayer(user)).submissions[problem_code].append(sub)
-                contest.update_score()
-                contest.running_submissions.remove(id)
+            info = {
+                'bot'    : bot,
+                'channel': channel if contest is None else user.discord_user,
+                'user'   : user,
+                'content': [str(id)],
+            }
+            await handlers.Submissions().view(info, live_submission=True, submission=sub)
             return
         except KeyError:
             pass
@@ -53,7 +50,7 @@ class Problem(BaseHandler):
     command_help["change"] = [
         ["Command", "`" + COMMAND_PREFIX + "problem change (problem code) (field to change) (new value)`"],
         ["problem code", "The problem code for the problem to change."],
-        ["field to change", "The field in the problem to change. Possible fields are: [`" + "`, `".join(delete_elements(list(models.Problem("").__dict__.keys()), unchangeable_problem_fields)) + "`]"],
+        ["field to change", "The field in the problem to change. Possible fields are: [`" + "`, `".join(set(models.Problem("").__dict__.keys()) - unchangeable_problem_fields) + "`]"],
         ["new value", "The new value for the field specified."],
     ]
     async def list(self, info):
@@ -80,7 +77,7 @@ class Problem(BaseHandler):
             except (ValueError, KeyError):
                 await info['bot'].send_message(info['channel'], "Please enter a valid problem code.")
                 return
-            if not await has_perm(info['bot'], info['channel'], info['user'], "view this problem", not problem.is_public and not is_contest):
+            if not await has_perm(info['bot'], info['channel'], info['user'], "view this problem", not problem.is_public and not in_contest):
                 return
             if in_contest:
                 em = Embed(title="Problem Details", description=info['description'], color=BOT_COLOUR)
@@ -89,10 +86,10 @@ class Problem(BaseHandler):
             em = Embed(title="Problem Info", description="`{}` problem info.".format(problem.problem_code))
             em.add_field(name="Problem Name", value=problem.problem_name)
             em.add_field(name="Problem Code", value=problem.problem_code)
-            em.add_field(name="Point Value", value="{}p".format(problem.point_value if not is_contest else 100))   
+            em.add_field(name="Point Value", value="{}p".format(problem.point_value if not in_contest else 100))   
             em.add_field(name="Time Limit", value="{}s".format(problem.time))
             em.add_field(name="Memory Limit", value=to_memory(problem.memory))
-            if not is_contest and info['user'].is_admin:
+            if not in_contest and info['user'].is_admin:
                 em.add_field(name="Is Public", value="Y" if problem.is_public else "N")
        
         await info['bot'].send_message(info['user'].discord_user, embed=em)
@@ -189,7 +186,10 @@ class Problem(BaseHandler):
             if problem_code not in database.problem_list.keys():
                 await info['bot'].send_message(info['channel'], "Problem `{}` does not exist.".format(problem_code))
                 return
-            os.system("mv problems/{0} deleted_problems/{0}_{1}".format(problem_code, int(time.time())))
+            try:
+                os.system("mv problems/{0} deleted_problems/{0}_{1}".format(problem_code, int(time.time())))
+            except FileNotFoundError:
+                pass
             database.problem_list.pop(problem_code)
         await info['bot'].send_message(info['channel'], "Successfully deleted problem `{}`.".format(problem_code))
 
@@ -228,4 +228,4 @@ class Problem(BaseHandler):
         models.Submission.save_code(id, code)
         database.judgeserver.judges.judge(id, problem, judge_lang[info['user'].language], code, info['user'], submission_time)
         await info['bot'].send_message(info['channel'], "{0}, Submitting code to `{1}`. Please wait.".format(info['user'].discord_user.mention, problem_code))
-        await info['bot'].loop.create_task(wait_submission_finish(info['bot'], info['channel'], id, info['user'], problem_code, contest))
+        await info['bot'].loop.create_task(wait_submission_finish(info['bot'], info['channel'], id, info['user'], contest))

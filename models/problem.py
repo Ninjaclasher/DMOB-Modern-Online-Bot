@@ -10,6 +10,15 @@ class Problem:
         self.point_value = point_value
         self.is_public = is_public
 
+    def __eq__ (self, other):
+        return self.problem_code == other.problem_code
+    
+    def __str__(self):
+        return self.problem_code
+    
+    def __repr__(self):
+        return "\"{}\"".format(self.problem_code)
+
     @property
     def file(self):
         return "problems/{0}/{0}.pdf".format(self.problem_code)
@@ -17,13 +26,6 @@ class Problem:
     def save(self):
         with open("problems/" + self.problem_code + "/" + self.problem_code + ".json", "w") as s:
             s.write(str(self.__dict__).replace("'","\""))
-
-    def __eq__ (self, other):
-        return self.problem_code == other.problem_code
-    def __str__(self):
-        return self.problem_code
-    def __repr__(self):
-        return "\"{}\"".format(self.problem_code)
 
     @staticmethod
     def read(problem_code):

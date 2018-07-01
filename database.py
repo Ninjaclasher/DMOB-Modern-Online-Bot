@@ -17,6 +17,7 @@ judge_list = []
 submission_list = None
 submission_cases_list = None
 judgeserver = None
+judges = {}
 loading = False
 
 id = 1
@@ -33,7 +34,7 @@ async def load_user(bot, user_id):
         return users[user_id]
 
 async def load(bot):
-    global loading
+    global loading    
     loading = True
     global id
     global problem_list
@@ -42,8 +43,11 @@ async def load(bot):
     global submission_cases_list
     global discord_users_list
     global users
-    global judgeserver 
+    global judgeserver
+    global judge_list
+    global judges
     global locks
+ 
     try:
         with open("bot.json", "r") as f:
             d = json.loads(f.read())
@@ -91,6 +95,7 @@ async def save():
     global judge_list
     global users
     global judgeserver
+    global judges
     global locks
 
     for x in locks.values():
@@ -98,12 +103,15 @@ async def save():
             with await y:
                 pass
     
+    for x in judges.values():
+        x.terminate()
+
     judgeserver.stop()
     with open("bot.json", "w") as f:
         store = {"id": id}
         f.write(str(store).replace("'", "\""))
     for x in users.values():
-        x.save()
+        await x.save()
     for x in contest_list.values():
         x.save()
     for x in problem_list.values():

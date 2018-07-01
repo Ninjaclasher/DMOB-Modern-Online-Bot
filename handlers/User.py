@@ -71,5 +71,8 @@ class User(BaseHandler):
             if id is None:
                 return
             del database.users[id]
-            os.remove("players/{}.json".format(id)) 
+            try:
+                os.remove("players/{}.json".format(id)) 
+            except FileNotFoundError:
+                pass
         await info['bot'].send_message(info['channel'], "Successfully reset {}".format(str(database.discord_users_list[id])))

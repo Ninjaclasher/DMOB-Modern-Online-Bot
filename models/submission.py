@@ -19,6 +19,9 @@ class Submission:
         self.problem = problem
         self.submission_time=submission_time
 
+    def __repr__(self):
+        return str(self.submission_id)
+
     def __str__(self):
         return "(Submission {0}: {1} {2}/{3} - {4}s, {5}) by {6} to {7} on {8}".format(self.submission_id, self.result, self.points, self.total, round(self.time, 3), to_memory(self.memory), self.user.discord_user, self.problem, to_datetime(self.submission_time))
     
@@ -64,6 +67,7 @@ class Submission:
             return Submission(d["submission_id"],d["points"],d["total"],d["time"],d["memory"], d["result"], database.users[str(d["user"])], database.problem_list[str(d["problem"])], d["submission_time"])
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
             print("Not a recognizable submission file, {}.".format(submission_id), file=sys.stderr)
+            return Submission(int(submission_id))
 
 class SubmissionTestCase:
     def __init__(self, submission_id, case, status="", time=0.0, memory=0.0, points=0.0, total=0.0, batch=0):

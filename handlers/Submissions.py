@@ -37,15 +37,15 @@ class Submissions(BaseHandler):
             em.add_field(name="Submission #{}".format(x.submission_id), value='\n'.join(values))
         await info['bot'].send_message(info['channel'], embed=em)
 
-    async def view(self, info, live_submission=False):
-        sub = await get_submission(self, info)
+    async def view(self, info, live_submission=False, submission=None):
+        sub = await get_submission(self, info) if submission is None else submission
         if sub is None:
             return
         with await database.locks["submissions"][sub.submission_id]:
             if live_submission:
-                description = info['description']
+                description = "Details on your submission to `{}`".format(sub.problem.problem_code)
             else:
-                description = "Details on submission #{}".format(info['content'][0])
+                description = "Details on submission #{}".format(sub.submission_id)
             em = Embed(title="Submission Details", description=description, color=verdict_colours[sub.result])
             em.add_field(name="Problem Name", value=sub.problem.problem_name)
             em.add_field(name="Submission ID", value=str(sub.submission_id))
@@ -96,5 +96,6 @@ class Submissions(BaseHandler):
             if not await has_perm(info['bot'], info['channel'], info['user'], "delete submission #{}".format(sub.submission_id)):
                 return
             database.submission_list.remove(sub)
+            await sub.user.update_points()
             os.system("mv submissions/{} deleted_submissions/".format(sub.submission_id))
             await info['bot'].send_message(info['channel'], "Successfully deleted submission #{}".format(sub.submission_id))

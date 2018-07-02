@@ -1,6 +1,8 @@
 import math
 import time
 
+from bisect import bisect
+
 def plural(num):
     return "s" if num != 1 else ""
 
@@ -21,14 +23,14 @@ def to_datetime(convert_time):
     return time.strftime('%h %d, %Y %I:%M:%S %p', time.localtime(convert_time))
 
 def to_memory(kilobyte):
+    byte = ["", "K", "M", "G", "T", "P", "E", "Z"]
     if kilobyte < 0:
         raise ValueError("Kilobyte cannot be negative.")
-    byte = ["K", "M", "G", "T", "P", "E", "Z"]
-    for i, j in enumerate(byte, 1):
-        if kilobyte >= 2**(i*10):
-            continue
-        return "{0}{1}B".format(round(kilobyte/float(2**((i-1)*10)),2), j)
-    raise ValueError("Kilobyte is too large.")
+    elif kilobyte > 2**(len(byte)*10):
+        raise ValueError("Kilobyte is too large.")
+        
+    i  = bisect([2**(10*x) for x in range(len(byte))], kilobyte) - 1
+    return "{0}{1}B".format(round(kilobyte/float(2**(i*10)), 2), byte[i])
 
 def get_element(arr, val):
     for x in arr:
@@ -121,7 +123,7 @@ async def has_perm(bot, channel, user, message, alternate_condition=True, no_per
 async def get_current_list(info, arr, elements_per_page=9):
     try:
         page_num = int(info['content'][0]) if len(info['content']) > 0 else 1
-        if page_num < 1 or (page_num-1)*elements_per_page > len(arr):
+        if (page_num < 1 or (page_num-1)*elements_per_page >= len(arr)) and page_num != 1:
             raise ValueError
     except (ValueError, IndexError):
         await info['bot'].send_message(info['channel'], "Please enter a valid page number.")
@@ -189,7 +191,8 @@ help_list["judge"] = {
 help_list["user"] = {
     "help"                                  : "Displays this message.",
     "list [page number]"                    : "Lists all users with a non-zero point value.",
-    "view (user)"                           : "Views details on a user.",
+    "view [user]"                           : "Views details on a user.",
+    "submissions [user] [page number]"      : "Views a page of submissions by a user.",
     "make {admin, normal} (user)"           : "Make a user an admin or a normal user.",
     "reset (user)"                          : "Resets a user to the default values.",
 }
@@ -213,7 +216,7 @@ judge_lang = {
 
 dmob_lang = {y:x for x, y in judge_lang.items()}
 
-verdicts = {
+VERDICT_FULL = {
     'AC'    : 'Accepted',
     'WA'    : 'Wrong Answer',
     'TLE'   : 'Time Limit Exceeded',
@@ -227,20 +230,17 @@ verdicts = {
     'AB'    : 'Aborted',
 }
 
-verdict_colours = {
+VERDICT_COLOUR = {
     'AC'    : 0x53F23F,
     'WA'    : 0xEF1B32,
-    'TLE'   : 0x0C0C0C,
-    'MLE'   : 0x0C0C0C,
+    'TLE'   : 0xC0C0C0,
+    'MLE'   : 0xC0C0C0,
     'OLE'   : 0xFAB623,
     'IR'    : 0xFAB623,
     'RTE'   : 0xFAB623,
-    'CE'    : 0x0C0C0C,
+    'CE'    : 0xC0C0C0,
     'IE'    : 0xFF0000,
-    'SC'    : 0x0C0C0C,
-    'AB'    : 0x0C0C0C,
+    'SC'    : 0xC0C0C0,
+    'AB'    : 0xC0C0C0,
 }
 
-RANKING_TITLES = ["Unrated", "Newbie", "Amateur", "Expert", "Candidate Master", "Master", "Grandmaster", "Hacker"]
-RANKING_VALUES = [0, 1, 1000, 1200, 1500, 1800, 2200, 3000]
-RANKING_COLOUR = [0xFFFFFF, 0x909090, 0x00A900, 0x0000FF, 0x800080, 0xFFB100, 0x0E0000, 0xFF0000]

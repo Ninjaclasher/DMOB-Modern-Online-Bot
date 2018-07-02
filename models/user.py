@@ -34,7 +34,7 @@ class Player:
         with await database.locks["user"][self.discord_user.id]:
             self._submissions = list(self._submissions)
             self.discord_user = self.discord_user.id
-            with open("players/" + self.discord_user + ".json", "w") as s:
+            with open("players/{}.json".format(self.discord_user), "w") as s:
                 s.write(str(self.__dict__).replace("'","\""))
             self.discord_user = database.discord_users_list[self.discord_user]
             self._submissions = SortedSet(self._submissions)

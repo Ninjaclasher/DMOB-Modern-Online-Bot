@@ -38,6 +38,14 @@ class Submission:
         return self.user == user
 
     @property
+    def verdict_colour(self):
+        return VERDICT_COLOUR[self.result]
+
+    @property
+    def verdict_full(self):
+        return VERDICT_FULL[self.result]
+
+    @property
     def source(self):
         return open("submissions/{0}/{0}.code".format(self.submission_id), "r").read()
 

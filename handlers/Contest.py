@@ -32,7 +32,7 @@ class Contest(BaseHandler):
             return
         for x in content[1:]:
             if x not in database.problem_list.keys():
-                await info['bot'].send_message(info['channel'], "Problem `{}` does not exists. The contest cannot be created.".format(x))
+                await info['bot'].send_message(info['channel'], "Problem `{}` does not exist. The contest cannot be created.".format(x))
                 return
         if len(content) == 1:
             await info['bot'].send_message(info['channel'], "Cannot create an empty contest!")

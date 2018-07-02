@@ -19,6 +19,7 @@ async def on_ready():
     print(bot.user.name)
     print(bot.user.id)
     print("------")
+    print("Loading database...")
     await database.load(bot)
     print("Database loaded")
 
@@ -62,7 +63,7 @@ async def process_command(message, command, content):
         info['game'] = game
         if second_command in requires_contest_running and not await game.check_contest_running():
             return
-        elif second_command in requires_in_contest and not await game.in_contest(user): 
+        elif second_command in requires_in_contest and not game.in_contest(user):
             await bot.send_message(message.channel, "You are not in this contest! Please join first.")
             return
     if command in help_list.keys():
@@ -71,6 +72,12 @@ async def process_command(message, command, content):
             await getattr(call(), second_command)(info)
         except AttributeError:
             pass
+    try:
+        if len(message.attachments) > 0:
+            await bot.delete_message(message)
+            await bot.send_message(message.channel, "You sent a message starting with a `{}` (The prefix to trigger this bot) that contains a file. It was deleted in case the file contains valid code.".format(COMMAND_PREFIX))
+    except:
+        pass
 
 @bot.event
 async def on_message(message):

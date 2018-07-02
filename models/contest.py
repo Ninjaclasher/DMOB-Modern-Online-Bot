@@ -21,7 +21,7 @@ class Contest:
         return self.name == other.name
 
     def save(self):
-        with open("contests/" + self.name + ".json", "w") as s:
+        with open("contests/{}.json".format(self.name), "w") as s:
             s.write(str(self.__dict__).replace("'","\""))
 
     @staticmethod
@@ -45,7 +45,7 @@ class ContestPlayer:
 
     @property
     def best_submissions(self):
-        return [max(x, default=ContestSubmission(None, -1, 0.0, 0.0, 0, 0, "UK", None, None, 0), key=lambda y: [y.score, -y.submission_time]) for x in self.submissions.values()]
+        return [max(x, default=ContestSubmission(None, -1), key=lambda y: [y.score, -y.submission_time]) for x in self.submissions.values()]
 
     @property
     def total_score(self):

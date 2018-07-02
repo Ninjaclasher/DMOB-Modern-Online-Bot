@@ -93,6 +93,7 @@ async def save():
     global submission_list
     global submission_cases_list    
     global judge_list
+    global games
     global users
     global judgeserver
     global judges
@@ -105,8 +106,11 @@ async def save():
     
     for x in judges.values():
         x.terminate()
-
     judgeserver.stop()
+    
+    for x in games.values():
+        await x.release_submissions()
+
     with open("bot.json", "w") as f:
         store = {"id": id}
         f.write(str(store).replace("'", "\""))

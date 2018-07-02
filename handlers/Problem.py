@@ -71,9 +71,7 @@ class Problem(BaseHandler):
         problem_code = info['content'][0].lower()
         with await database.locks["problem"][problem_code]:
             try:
-                problem = get_element(list(database.problem_list.values()), models.Problem(problem_code))
-                if problem is None:
-                    raise KeyError
+                problem = database.problem_list[problem_code]
             except (ValueError, KeyError):
                 await info['bot'].send_message(info['channel'], "Please enter a valid problem code.")
                 return
@@ -112,14 +110,14 @@ class Problem(BaseHandler):
                 await info['bot'].send_message(info['channel'], "Please upload one file for the problem statement.")
                 return 
             problem_code = content[0].lower()
+            problem_name = content[1].replace("_", " ")
+            point_value, time_limit, memory_limit = map(int, content[2:])
         except (KeyError, ValueError, IndexError, requests.HTTPError):
-            await info['bot'].send_message(info['channel'], "Cannot parse the message content to create a new problem. Please try again.") 
+            await info['bot'].send_message(info['channel'], "Failed to parse the message content to create a new problem. Please try again.") 
         with await database.locks["problem"][problem_code]:
             if problem_code in database.problem_list.keys():
                 await info['bot'].send_message(info['channel'], "A problem with problem code `{}` already exists. Please try again.".format(problem_code))
                 return
-            problem_name = content[1].replace("_", " ")
-            point_value, time_limit, memory_limit = map(int, content[2:])
             database.problem_list[problem_code] = models.Problem(problem_code, problem_name, point_value, time_limit, memory_limit, 0)
             os.mkdir("problems/{}".format(problem_code))
             with open("problems/{0}/{0}.pdf".format(problem_code), "wb") as f:
@@ -142,11 +140,12 @@ class Problem(BaseHandler):
         except (KeyError, ValueError, IndexError):
             await info['bot'].send_message(info['channel'], "Failed to parse the message content to change the problem. Please try again.")
         with await database.locks["problem"][problem_code]:
-            problem = get_element(list(database.problem_list.values()), models.Problem(problem_code))
-            if problem is None:
+            try:
+                problem = database.problem_list[problem_code]
+            except KeyError:
                 await info['bot'].send_message(info['channel'], "Problem `{}` does not exist.".format(problem_code))
                 return
-            elif field in unchangeable_problem_fields or field not in problem.__dict__.keys():
+            if field in unchangeable_problem_fields or field not in problem.__dict__.keys():
                 await info['bot'].send_message(info['channel'], "Cannot change field `{}`. Please try again.".format(content[1]))
                 return
             problem.__dict__[field] = int(content[2]) if field != "problem_name" else content[2].replace("_", " ")
@@ -163,11 +162,12 @@ class Problem(BaseHandler):
         except (KeyError, ValueError, IndexError):
             await info['bot'].send_message(info['channel'], "Failed to parse the message content to change the problem. Please try again.")
         with await database.locks["problem"][problem_code]:
-            problem = get_element(list(database.problem_list.values()), models.Problem(problem_code))
-            if problem is None:
+            try:
+                problem = database.problem_list[problem_code]
+            except KeyError:
                 await info['bot'].send_message(info['channel'], "Problem `{}` does not exist.".format(problem_code))
                 return
-            elif problem.is_public == int(value == "public"):
+            if problem.is_public == int(value == "public"):
                 await info['bot'].send_message(info['channel'], "Problem `{0}` is already {1}.".format(problem_code, value))
                 return
             problem.is_public = int(value == "public")
@@ -176,9 +176,8 @@ class Problem(BaseHandler):
     async def delete(self, info):
         if not await has_perm(info['bot'], info['channel'], info['user'], "delete problems"):
             return            
-        content = info['content']
         try:
-            problem_code = content[0].lower()
+            problem_code = info['contentS'][0].lower()
         except (KeyError, ValueError, IndexError):
             await info['bot'].send_message(info['channel'], "Failed to parse the message content to delete the problem. Please try again.")        
 
@@ -190,11 +189,10 @@ class Problem(BaseHandler):
                 os.system("mv problems/{0} deleted_problems/{0}_{1}".format(problem_code, int(time.time())))
             except FileNotFoundError:
                 pass
-            database.problem_list.pop(problem_code)
+            del database.problem_list[problem_code]
         await info['bot'].send_message(info['channel'], "Successfully deleted problem `{}`.".format(problem_code))
 
     async def submit(self, info, contest=None):
-            
         if len(info['message'].attachments) < 1:
             await info['bot'].send_message(info['channel'], "Please upload one file for judging in the message.")
             return

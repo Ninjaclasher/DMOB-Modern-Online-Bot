@@ -24,7 +24,7 @@ class Problem:
         return "problems/{0}/{0}.pdf".format(self.problem_code)
 
     def save(self):
-        with open("problems/" + self.problem_code + "/" + self.problem_code + ".json", "w") as s:
+        with open("problems/{0}/{0}.json".format(self.problem_code), "w") as s:
             s.write(str(self.__dict__).replace("'","\""))
 
     @staticmethod

@@ -107,11 +107,11 @@ class DMOBGame:
             return False
         return True
     
-    async def in_contest(self,user):
+    def in_contest(self,user):
         return ContestPlayer(user) in self.members
     
     async def join(self, user):
-        if await self.in_contest(user):
+        if self.in_contest(user):
             await self.bot.send_message(self.channel, "You are already in the contest!")
         else:
             self.members.append(ContestPlayer(user, self.contest.problems))

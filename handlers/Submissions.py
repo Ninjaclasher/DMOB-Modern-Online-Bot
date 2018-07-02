@@ -46,11 +46,11 @@ class Submissions(BaseHandler):
                 description = "Details on your submission to `{}`".format(sub.problem.problem_code)
             else:
                 description = "Details on submission #{}".format(sub.submission_id)
-            em = Embed(title="Submission Details", description=description, color=verdict_colours[sub.result])
+            em = Embed(title="Submission Details", description=description, color=sub.verdict_colour)
             em.add_field(name="Problem Name", value=sub.problem.problem_name)
             em.add_field(name="Submission ID", value=str(sub.submission_id))
             em.add_field(name="Submission Time", value=to_datetime(sub.submission_time))
-            em.add_field(name="Verdict", value="{0} ({1})".format(sub.result, verdicts[sub.result]))
+            em.add_field(name="Verdict", value="{0} ({1})".format(sub.result, sub.verdict_full))
             em.add_field(name="Points Recieved", value="{0}/{1}".format(sub.points, float(sub.total)))
             em.add_field(name="Total Running Time", value="{}s".format(round(sub.time,4)))
             em.add_field(name="Memory Usage", value=to_memory(sub.memory))
@@ -66,11 +66,11 @@ class Submissions(BaseHandler):
                 if len(values) > num_per_embed:
                     chunked = [values[x:x+num_per_embed] for x in range(0, len(values), num_per_embed)]
                     for i, y in enumerate(chunked, 1):
-                        em = Embed(title="Submission Cases", description=description, color=verdict_colours[sub.result])
+                        em = Embed(title="Submission Cases", description=description, color=sub.verdict_colour)
                         em.add_field(name="{0} Part {1}".format(name, i), value="\n".join(y))
                         embeds.append(em)
                 else:
-                    em = Embed(title="Submission Cases", description=description, color=verdict_colours[sub.result])
+                    em = Embed(title="Submission Cases", description=description, color=sub.verdict_colour)
                     em.add_field(name=name, value="\n".join(values))
                     embeds.append(em)
             with await database.locks["user"][info['user'].discord_user.id]:
@@ -96,6 +96,10 @@ class Submissions(BaseHandler):
             if not await has_perm(info['bot'], info['channel'], info['user'], "delete submission #{}".format(sub.submission_id)):
                 return
             database.submission_list.remove(sub)
+            database.submission_cases_list[sub.submission_id] = []
             await sub.user.update_points()
-            os.system("mv submissions/{} deleted_submissions/".format(sub.submission_id))
+            try:
+                os.system("mv submissions/{} deleted_submissions/".format(sub.submission_id))
+            except FileNotFoundError:
+                pass
             await info['bot'].send_message(info['channel'], "Successfully deleted submission #{}".format(sub.submission_id))

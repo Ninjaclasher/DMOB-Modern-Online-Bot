@@ -42,6 +42,23 @@ class User(BaseHandler):
             em.add_field(name="Volatility", value="{}".format(user.volatility))
         await info['bot'].send_message(info['channel'], embed=em)
 
+    async def submissions(self, info):
+        id = await get_user_id(self, info, False)
+        if id is not None:
+            del info['content'][0]
+        user = info['user'] if id is None else await database.load_user(info['bot'], id)
+        current_list, page_num = await get_current_list(info, user.submissions)
+        if current_list is None:
+            return
+        em = Embed(title="User Submissions", description="User Submissions page {}".format(page_num), color=BOT_COLOUR)
+        if len(current_list) == 0:
+            em.add_field(name="No Submissions", value="{} has no submissions.".format(user.discord_user.mention))
+        else:
+            for x in current_list:
+                values = ["Problem: {}".format(x.problem.problem_name), "Score: {0}/{1}".format(x.points, x.total), "Verdict: {}".format(x.result)]
+                em.add_field(name="Submission #{}".format(x.submission_id), value='\n'.join(values))
+        await info['bot'].send_message(info['channel'], embed=em)
+
     async def make(self, info):
         if not await has_perm(info['bot'], info['channel'], info['user'], "change user properties"):
             return 

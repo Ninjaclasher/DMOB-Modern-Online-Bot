@@ -54,8 +54,8 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
             self.server.unschedule(self._no_response_job)
         self.server.judges.remove(self)
 
-    def _authenticate(self, id, key):
-        return Judge(id, key) in database.judge_list
+    def _authenticate(self, name, key):
+        return Judge(None, name, key) in database.judge_list
 
     def _format_send(self, data):
         return super(JudgeHandler, self)._format_send(json.dumps(data, separators=(',', ':')))
@@ -68,7 +68,6 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
             print(packet['id'] + " failed authentication")
             self.close()
             return
-
         self._to_kill = False
         self._problems = packet['problems']
         self.problems = dict(self._problems)
@@ -157,10 +156,11 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
         self.batch_id = None
     
     def set_submission(self, id, points, total, time, memory, status_code):
-        user = self.server.judges.submission_info[id][0]
+        user_id = self.server.judges.submission_info[id][0]
         problem = self.server.judges.submission_info[id][1]
         sub_time = self.server.judges.submission_info[id][2]
-        self.server.judges.finished_submissions[id] = Submission(id, points, total, time, memory, status_code, user, problem, sub_time)
+        source = self.server.judges.submission_info[id][3]
+        self.server.judges.finished_submissions[id] = Submission(id, points, total, time, memory, status_code, user_id, problem.code, sub_time, source)
 
     def on_grading_end(self, packet):
         time = 0
@@ -171,7 +171,7 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
         status_codes = ['SC', 'AC', 'WA', 'MLE', 'TLE', 'IR', 'RTE', 'OLE']
         batches = {}  # batch number: (points, total)
 
-        for case in database.submission_cases_list[packet['submission-id']]:
+        for case in database.get_submission_cases(packet['submission-id']):
             time += case.time
             if not case.batch:
                 points += case.points
@@ -220,7 +220,7 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
 
     def on_test_case(self, packet, max_feedback=100):
         id = packet['submission-id']
-        test_case = SubmissionTestCase(submission_id=id, case=packet['position'])
+        test_case = SubmissionTestCase(id=None, submission_id=id)
         status = packet['status']
         if status & 4:
             test_case.status = 'TLE'
@@ -238,14 +238,15 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
             test_case.status = 'SC'
         else:
             test_case.status = 'AC'
+        test_case.case = packet['position']
         test_case.time = packet['time']
         test_case.memory = packet['memory']
         test_case.points = packet['points']
         test_case.total = packet['total-points']
         test_case.batch = self.batch_id if self.in_batch else -1
-        #test_case.feedback = (packet.get('feedback', None) or '')[:max_feedback]
-        #test_case.output = packet['output']
-        database.submission_cases_list[id].add(test_case)
+        test_case.feedback = (packet.get('feedback', None) or '')[:max_feedback]
+        test_case.output = packet['output']
+        database.add_submission_case(test_case)
     
     def on_malformed(self, packet):
         pass

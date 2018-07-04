@@ -23,9 +23,11 @@ def to_datetime(convert_time):
     return time.strftime('%h %d, %Y %I:%M:%S %p', time.localtime(convert_time))
 
 def to_memory(kilobyte):
-    byte = ["", "K", "M", "G", "T", "P", "E", "Z"]
+    byte = ["K", "M", "G", "T", "P", "E", "Z"]
     if kilobyte < 0:
         raise ValueError("Kilobyte cannot be negative.")
+    elif kilobyte == 0:
+        return "0B"
     elif kilobyte > 2**(len(byte)*10):
         raise ValueError("Kilobyte is too large.")
         
@@ -37,11 +39,6 @@ def get_element(arr, val):
         if x == val:
             return x
     return None
-
-def delete_elements(arr, delete):
-    for x in delete:
-        arr.remove(x)
-    return arr
 
 def rational_approximation(t):
     c = [2.515517, 0.802853, 0.010328]
@@ -197,7 +194,7 @@ help_list["user"] = {
     "reset (user)"                          : "Resets a user to the default values.",
 }
 
-unchangeable_problem_fields = {"problem_code", "is_public"}
+unchangeable_problem_fields = {"problem_code", "is_public", "_user", "id"}
 
 judge_lang = {
     "c"         : "C",
@@ -228,6 +225,7 @@ VERDICT_FULL = {
     'IE'    : 'Internal Error',
     'SC'    : 'Short circuit',
     'AB'    : 'Aborted',
+    'QU'    : 'Processing',
 }
 
 VERDICT_COLOUR = {
@@ -242,5 +240,6 @@ VERDICT_COLOUR = {
     'IE'    : 0xFF0000,
     'SC'    : 0xC0C0C0,
     'AB'    : 0xC0C0C0,
+    'QU'    : 0xC0C0C0,
 }
 

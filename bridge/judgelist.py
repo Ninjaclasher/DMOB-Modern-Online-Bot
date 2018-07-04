@@ -49,7 +49,8 @@ class JudgeList(object):
             self._handle_free_judge(judge)
 
     def remove(self, judge):
-        print(judge.name + " disconnected")
+        if judge.name is not None:
+            print(judge.name + " disconnected")
         with self.lock:
             sub = judge.get_current_submission()
             if sub is not None:
@@ -75,15 +76,15 @@ class JudgeList(object):
         with self.lock:
             if id in self.submission_map:
                 return
-            self.submission_info[id] = [user, problem, sub_time]
-            candidates = [judge for judge in self.judges if not judge.working and judge.can_judge(problem.problem_code, language)]
+            self.submission_info[id] = [user, problem, sub_time, source]
+            candidates = [judge for judge in self.judges if not judge.working and judge.can_judge(problem.code, language)]
             if candidates: 
                 judge = min(candidates, key=attrgetter('load'))
                 self.submission_map[id] = judge
                 try:
-                    judge.submit(id, problem.problem_code, problem.time, problem.memory, language, source)
+                    judge.submit(id, problem.code, problem.time_limit, problem.memory_limit, language, source)
                 except Exception:
                     self.judges.discard(judge)
-                    return self.judge(id, problem.problem_code, problem.time, problem.memory, language, source, priority)
+                    return self.judge(id, problem.code, problem.time_limit, problem.memory_limit, language, source, priority)
             else:
-                self.queue.insert((id, problem.problem_code, problem.time, problem.memory, language, source), self.priority[priority])
+                self.queue.insert((id, problem.code, problem.time_limit, problem.memory_limit, language, source), self.priority[priority])

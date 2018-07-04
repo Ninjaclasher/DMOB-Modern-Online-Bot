@@ -12,7 +12,6 @@ async def get_user_id(self, info, error_message = True):
         return None
     return info['message'].mentions[0].id
 
-
 class User(BaseHandler):
     async def list(self, info):
         user_list = [x for x in database.users.values()]
@@ -55,7 +54,7 @@ class User(BaseHandler):
             em.add_field(name="No Submissions", value="{} has no submissions.".format(user.discord_user.mention))
         else:
             for x in current_list:
-                values = ["Problem: {}".format(x.problem.problem_name), "Score: {0}/{1}".format(x.points, x.total), "Verdict: {}".format(x.result)]
+                values = ["Problem: {}".format(x.problem.name), "Score: {0}/{1}".format(x.points, x.total), "Verdict: {}".format(x.result)]
                 em.add_field(name="Submission #{}".format(x.submission_id), value='\n'.join(values))
         await info['bot'].send_message(info['channel'], embed=em)
 

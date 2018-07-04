@@ -72,13 +72,7 @@ async def process_command(message, command, content):
             await getattr(call(), second_command)(info)
         except AttributeError:
             pass
-    try:
-        if len(message.attachments) > 0:
-            await bot.delete_message(message)
-            await bot.send_message(message.channel, "You sent a message starting with a `{}` (The prefix to trigger this bot) that contains a file. It was deleted in case the file contains valid code.".format(COMMAND_PREFIX))
-    except:
-        pass
-
+    
 @bot.event
 async def on_message(message):
     if message.author.bot:
@@ -87,7 +81,12 @@ async def on_message(message):
         stripped_message = message.content[len(COMMAND_PREFIX):].strip().split(" ")
         command = stripped_message[0]
         await process_command(message, command, stripped_message[1:])
-
+        try:
+            if len(message.attachments) > 0:
+                await bot.delete_message(message)
+                await bot.send_message(message.channel, "You sent a message starting with a `{}` (The prefix to trigger this bot) that contains a file. It was deleted in case the file contains valid code.".format(COMMAND_PREFIX))
+        except:
+            pass
 try:
     database.loading = True
     bot.loop.run_until_complete(bot.start(DMOBToken))

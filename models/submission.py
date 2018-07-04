@@ -1,41 +1,44 @@
 import database
-import json
-import os
-import sys
 import time
-from .user import Player
-from .problem import Problem
 from util import *
 
 class Submission:
-    def __init__(self, submission_id, points=0.0, total=0.0, time=0.0, memory=0.0, result="IE", user=None, problem=None, submission_time=time.time()):
+    def __init__(self, submission_id, points=0.0, total=0.0, time=0.0, memory=0.0, result="IE", user="", problem="", submission_time=time.time(), source="", deleted=0, game=None):
         self.submission_id = submission_id
         self.points = points
         self.total = total
         self.time = time
         self.memory = memory
         self.result = result
-        self.user = user
-        self.problem = problem
-        self.submission_time=submission_time
+        self._user = user
+        self._problem = problem
+        self.submission_time = submission_time
+        self.source = source
+        self.deleted = deleted
+        self.game = game
 
-    def __repr__(self):
-        return str(self.submission_id)
+    def db_save(self):
+        return self.submission_id, self.points, self.total, self.time, self.memory, self.result, self._user, self._problem, self.submission_time, self.source, self.deleted, self.game
 
     def __str__(self):
-        return "(Submission {0}: {1} {2}/{3} - {4}s, {5}) by {6} to {7} on {8}".format(self.submission_id, self.result, self.points, self.total, round(self.time, 3), to_memory(self.memory), self.user.discord_user, self.problem, to_datetime(self.submission_time))
-    
+        return "(Submission {0}: {1} {2}/{3} - {4}s, {5}) by {6} to {7} on {8}".format(self.submission_id, self.result, self.points, self.total, round(self.time, 3), to_memory(self.memory), self.user.discord_user, self._problem, to_datetime(self.submission_time))
+
     def __eq__(self, other):
         return self.submission_id == other.submission_id
     
     def __lt__(self, other):
         return self.submission_id < other.submission_id
     
-    def __hash__(self):
-        return self.submission_id
-
     def is_by(self, user):
         return self.user == user
+    
+    @property
+    def problem(self):
+        return database.problem_list[self._problem]
+
+    @property
+    def user(self):
+        return database.users[self._user]
 
     @property
     def verdict_colour(self):
@@ -46,39 +49,12 @@ class Submission:
         return VERDICT_FULL[self.result]
 
     @property
-    def source(self):
-        return open("submissions/{0}/{0}.code".format(self.submission_id), "r").read()
-
-    def save(self):
-        Submission.prepare_save(self.submission_id)
-        with open("submissions/{0}/{0}.json".format(self.submission_id), "w") as s:
-            s.write(str(self.__dict__).replace("'","\""))
-    
-    @staticmethod
-    def prepare_save(id):
-        if not os.path.isdir("submissions/{}".format(id)):
-            os.mkdir("submissions/{}".format(id))
-        if not os.path.isdir("submissions/{}/cases".format(id)):
-            os.mkdir("submissions/{}/cases".format(id))            
-
-    @staticmethod
-    def save_code(id, code):
-        Submission.prepare_save(id)
-        with open("submissions/{0}/{0}.code".format(id), "w") as s:
-            s.write(code)
-
-    @staticmethod
-    def read(submission_id):
-        try:
-            with open("submissions/{0}/{0}.json".format(submission_id), "r") as f:
-                d = json.loads(f.read())
-            return Submission(d["submission_id"],d["points"],d["total"],d["time"],d["memory"], d["result"], database.users[str(d["user"])], database.problem_list[str(d["problem"])], d["submission_time"])
-        except (FileNotFoundError, KeyError, json.JSONDecodeError):
-            print("Not a recognizable submission file, {}.".format(submission_id), file=sys.stderr)
-            return Submission(int(submission_id))
+    def score(self):
+        return int(self.points/float(self.total)*100) if self.total > 0 else 0
 
 class SubmissionTestCase:
-    def __init__(self, submission_id, case, status="", time=0.0, memory=0.0, points=0.0, total=0.0, batch=0):
+    def __init__(self, id, submission_id, points=0.0, total=0.0, time=0.0, memory=0, status="IE", case=0, batch=0):
+        self.id = id
         self.submission_id = submission_id
         self.case = case
         self.status = status
@@ -87,33 +63,26 @@ class SubmissionTestCase:
         self.points = points
         self.total = total
         self.batch = batch
+        self.feedback = ""
+        self.output = ""
+
+    def db_save(self):
+        return self.id, self.submission_id, self.points, self.total, self.time, self.memory, self.status, self.case, self.batch
 
     def __eq__(self, other):
         return self.submission_id == other.submission_id
     
-    def __hash__(self):
-        return self.case
-
-    def save(self):
-        with open("submissions/{0}/cases/{1}.json".format(self.submission_id, self.case), "w") as s:
-            s.write(str(self.__dict__).replace("'", "\""))
-
-    @staticmethod
-    def read(submission_id, submission_case):
-        try:
-            with open("submissions/{0}/cases/{1}.json".format(submission_id, submission_case), "r") as f:
-                d = json.loads(f.read())
-            return SubmissionTestCase(d["submission_id"], d["case"], d["status"], d["time"], d["memory"], d["points"], d["total"], d["batch"])
-        except (FileNotFoundError, KeyError, json.JSONDecodeError):
-            print("Not a recognizable submission case file, {}-{}".format(submission_id, submission_case), file=sys.stderr)
-
 class Judge:
-    def __init__(self, id, key):
+    def __init__(self, id, name, key):
         self.id = id
+        self.name = name
         self.key = key
 
+    def db_save(self):
+        return self.id, self.name, self.key
+
     def __eq__(self, other):
-        return self.id == other.id and self.key == other.key
+        return self.name == other.name and self.key == other.key
 
     def __str__(self):
-        return "{0} {1}".format(self.id, self.key)
+        return "{0} {1}".format(self.name, self.key)

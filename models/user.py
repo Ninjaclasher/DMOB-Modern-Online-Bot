@@ -1,59 +1,55 @@
 import database
-import database
-import json
-import sys
 from bisect import bisect
 from collections import defaultdict
-from sortedcontainers import SortedSet
 from util import *
 
 class Player:
-    def __init__(self,discord_id,points=0,rank=[],volatility=385,_submissions=[],language=DEFAULT_LANG,is_admin=0):
-        self.discord_user = database.discord_users_list[str(discord_id)]
+    def __init__(self,id,points=0,language=DEFAULT_LANG,is_admin=0):
+        self.id = id
         self.points = points
-        self.rank = rank
-        self.volatility = volatility
-        self._submissions = SortedSet(_submissions)
         self.language = language
         self.is_admin = is_admin
 
-    def __repr__(self):
-        return self.discord_user.id
-
     def __eq__(self, other):
-        return self.discord_user.id == other.discord_user.id
- 
+        return self.id == other.id
+    
+    def db_save(self):
+        return self.id, self.points, self.language, self.is_admin
+
     async def update_points(self):
-        with await database.locks["user"][self.discord_user.id]:
+        with await database.locks["user"][self.id]:
             max_subs = defaultdict(lambda: 0.0)
             for x in self.submissions:
-                max_subs[x.problem.problem_code] = max(max_subs[x.problem.problem_code], x.points/x.total*x.problem.point_value)
+                max_subs[x.problem.code] = max(max_subs[x.problem.code], x.points/x.total*x.problem.point_value if x.total > 0 else 0)
             self.points = sum(max_subs.values())
 
-    async def save(self):
-        with await database.locks["user"][self.discord_user.id]:
-            self._submissions = list(self._submissions)
-            self.discord_user = self.discord_user.id
-            with open("players/{}.json".format(self.discord_user), "w") as s:
-                s.write(str(self.__dict__).replace("'","\""))
-            self.discord_user = database.discord_users_list[self.discord_user]
-            self._submissions = SortedSet(self._submissions)
+    @property
+    def discord_user(self):
+        return database.discord_users_list[str(self.id)]
+
+    @property
+    def rank(self):
+        return database.get_ranks(self)
 
     @property
     def rating(self):
-        return 1200 if not self.rated else self.rank[-1]
+        return 1200 if not self.rated else self.rank[-1].rating
+
+    @property
+    def volatility(self):
+        return 385 if not self.rated else self.rank[-1].volatility
 
     @property
     def rank_title(self):
         if not self.rated:
             return RANKING_TITLES[0]
-        return RANKING_TITLES[bisect(RANKING_VALUES, self.rank[-1])-1]
+        return RANKING_TITLES[bisect(RANKING_VALUES, self.rating)-1]
     
     @property
     def rank_colour(self):
         if not self.rated:
             return RANKING_COLOUR[0]
-        return RANKING_COLOUR[bisect(RANKING_VALUES, self.rank[-1])-1]
+        return RANKING_COLOUR[bisect(RANKING_VALUES, self.rating)-1]
             
     @property
     def rated(self):
@@ -61,14 +57,15 @@ class Player:
 
     @property
     def submissions(self):
-        return [x for x in database.submission_list if x.submission_id in self._submissions]
+        return database.get_submissions(self)
 
-    @staticmethod
-    def read(discord_id):
-        try:
-            with open("players/{}.json".format(discord_id),"r") as f:
-                d = json.loads(f.read())
-            return Player(d["discord_user"],d["points"],d["rank"],d["volatility"],d["_submissions"],d["language"],d["is_admin"])
-        except (FileNotFoundError, KeyError, json.JSONDecodeError):
-            print("Not a recognizable user file, {}.".format(discord_id), file=sys.stderr)
+class Rank:
+    def __init__(self, id, user, rating, volatility):
+        self.id = id
+        self.user = user
+        self.rating = rating
+        self.volatility = volatility
+    
+    def db_save(self):
+        return self.id, self.user, self.rating, self.volatility
 

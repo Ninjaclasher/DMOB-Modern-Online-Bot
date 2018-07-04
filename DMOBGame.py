@@ -5,12 +5,18 @@ import time
 import threading
 
 from discord import *
-from models import Problem, ContestPlayer, ContestSubmission, Submission
+from models import Problem, ContestPlayer, Submission, Rank
 from settings import *
 from util import *
 
 import database
 import handlers
+
+# ------------- dmob_game ---------------
+# channel | contest | window | start_time 
+
+# --------dmob_game_participation--------
+#              user | dmob_game
 
 class DMOBGame:
     def __init__(self, bot, channel):
@@ -44,8 +50,7 @@ class DMOBGame:
 
     async def release_submissions(self):
         for x in self.finished_submissions:
-            database.submission_list.add(x)
-            x.user._submissions.add(x.submission_id)
+            database.add_submission(x)
         for x in self.members:
             await x.user.update_points()    
 
@@ -58,8 +63,7 @@ class DMOBGame:
         times_rated = [len(x.user.rank) for x in rated_members]
         new_rating, new_volatility = recalculate_ratings(old_rating, old_volatility, actual_rank, times_rated)
         for x in range(len(rated_members)):
-            rated_members[x].user.rank.append(new_rating[x])
-            rated_members[x].user.volatility = new_volatility[x]
+            database.add_rank(Rank(None, rated_members[x].user.id, new_rating[x], new_volatility[x]))
 
     def update_score(self):
         self.members.sort(key=lambda x: x.total_score,reverse=True)
@@ -69,9 +73,9 @@ class DMOBGame:
 
     async def on_finish_submission(self, sub):
         msg = "{0}, you received a score of {1} for your submission to `{2}`. Details on your submission have been PM'd to you."
-        await self.bot.send_message(self.channel, msg.format(sub.user.discord_user.mention, sub.score, sub.problem.problem_code))
+        await self.bot.send_message(self.channel, msg.format(sub.user.discord_user.mention, sub.score, sub.problem.code))
         self.finished_submissions.append(sub)
-        get_element(self.members, ContestPlayer(sub.user)).submissions[sub.problem.problem_code].append(sub)
+        get_element(self.members, ContestPlayer(sub.user)).submissions[sub.problem.code].append(sub)
         self.update_score()
         self.running_submissions.remove(sub.submission_id)
 
@@ -128,7 +132,7 @@ class DMOBGame:
         await self.bot.loop.create_task(self.count_down())
 
     async def display_problem(self, user, problem_code):
-        if Problem(problem_code) in self.contest.problems:
+        if Problem(None, problem_code) in self.contest.problems:
             info = {
                 'bot'        : self.bot,
                 'channel'    : self.channel,
@@ -140,8 +144,8 @@ class DMOBGame:
         else:
             em = Embed(title="Problems List", description="Problems in the `{}` contest.".format(self.contest.name), color=BOT_COLOUR)
             em.add_field(name="Problem Number", value="\n".join(map(str,range(1,len(self.contest.problems)+1))))
-            em.add_field(name="Problem Code", value="\n".join(x.problem_code for x in self.contest.problems))
-            em.add_field(name="Problem Name", value="\n".join(x.problem_name for x in self.contest.problems))
+            em.add_field(name="Problem Code", value="\n".join(x.code for x in self.contest.problems))
+            em.add_field(name="Problem Name", value="\n".join(x.name for x in self.contest.problems))
             await self.bot.send_message(self.channel, embed=em)
     
     async def rankings(self):

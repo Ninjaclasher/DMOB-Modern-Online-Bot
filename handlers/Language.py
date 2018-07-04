@@ -17,7 +17,7 @@ class Language(BaseHandler):
             lang = info['content'][0]
             if lang not in judge_lang.keys():
                 raise IndexError
-            with await database.locks["user"][info['user'].discord_user.id]:
+            with await database.locks["user"][info['user'].id]:
                 info['user'].language = lang
                 await info['bot'].send_message(info['channel'], "Your language has been changed to `{}`".format(lang))
         except IndexError:

@@ -12,8 +12,11 @@ class Contest(BaseHandler):
         if current_list is None:
             return
         em = Embed(title="Contests",description="Contest page {}".format(page_num), color=BOT_COLOUR)
-        for x in current_list:
-            em.add_field(name=x.name, value="\n".join(y.problem_name for y in x.problems))
+        if len(current_list) == 0:
+            em.add_field(name="No Contests", value="There are no contests.")
+        else:
+            for x in current_list:
+                em.add_field(name=x.name, value="\n".join(y.name for y in x.problems))
         await info['bot'].send_message(info['channel'], embed=em)
     
     async def add(self, info):
@@ -30,18 +33,19 @@ class Contest(BaseHandler):
         except ValueError:
             await info['bot'].send_message(info['channel'], "Contest with name `{}` already exists.".format(contest_name))
             return
-        for x in content[1:]:
-            if x not in database.problem_list.keys():
-                await info['bot'].send_message(info['channel'], "Problem `{}` does not exist. The contest cannot be created.".format(x))
-                return
-        if len(content) == 1:
+        s = set(content[1:])
+        not_exist = s-set(database.problem_list.keys())
+        if len(not_exist) > 0:    
+            await info['bot'].send_message(info['channel'], "The following problems do not exist, so the contest cannot be created: `{}`".format(" ".join(not_exist)))
+            return
+        elif len(content) == 1:
             await info['bot'].send_message(info['channel'], "Cannot create an empty contest!")
-        elif len(content[1:]) != len(set(content[1:])):
+        elif len(content[1:]) != len(s):
             await info['bot'].send_message(info['channel'], "Cannot create contest with duplicate problems.")
         elif len(content) > 8:
             await info['bot'].send_message(info['channel'], "Cannot create a contest with more than 8 problems.")
         else:
-            database.contest_list[contest_name] = models.Contest(contest_name, [database.problem_list[x] for x in content[1:]])
+            database.add_contest(models.Contest(None, contest_name, content[1:]))
             await info['bot'].send_message(info['channel'], "Contest `{}` successfully created!".format(contest_name))
 
     async def delete(self, info):
@@ -58,11 +62,8 @@ class Contest(BaseHandler):
         except ValueError:
             await info['bot'].send_message(info['channel'], "Contest `{}` does not exist.".format(contest_name))
             return
-        del database.contest_list[contest_name]
-        try:
-            os.remove("contests/{}.json".format(contest_name))
-        except FileNotFoundError:
-            pass
+        database.delete_contest(database.contest_list[contest_name])
+        
         await info['bot'].send_message(info['channel'], "Contest `{}` sucessfully deleted.".format(contest_name))
 
     async def start(self, info):

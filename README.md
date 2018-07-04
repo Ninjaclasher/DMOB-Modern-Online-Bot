@@ -8,16 +8,15 @@ This bot also requires the Discord api to be installed. Install it with `pip3 in
 
 Create the following folders:
 ```
-contests
 deleted_problems
-deleted_submissions
 judges
-players
 problems
-submissions
 ```
 These will be the locations where all the information will be stored as json files.
 
 Edit the `settings.py` file and fill in the `DMOBToken` field with a Discord bot token. As well, edit the other fields to suit your needs.
+
+You will also need to create a MySQL database:
+(UNFINISHED)
 
 Usage Instructions: `python3 DMOBMain.py`

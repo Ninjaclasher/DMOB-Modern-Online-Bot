@@ -19,8 +19,8 @@ def to_time(secs):
             if names[x][0] <= secs < names[x+1][0]:
                 return "{0} {1}{2} {3}".format(secs//names[x][0], names[x][1], plural(secs//names[x][0]), to_time(secs%names[x][0])).strip()
 
-def to_datetime(convert_time):
-    return time.strftime('%h %d, %Y %I:%M:%S %p', time.localtime(convert_time))
+def to_datetime(this_time):
+    return this_time.strftime('%h %d, %Y %I:%M:%S %p')
 
 def to_memory(kilobyte):
     byte = ["K", "M", "G", "T", "P", "E", "Z"]
@@ -142,11 +142,11 @@ help_list[""] = {
 }
 help_list["contest"] = {
     "help"                                  : "Displays this message.",
+    "list [page number]"                    : "Lists the available contests.",
     "add (contest name) (problem codes)"    : "Creates a contest with (problem codes) set of problems.",
     "delete (contest name)"                 : "Deletes a problem.",
     "start (contest name) [time window]"    : "Starts a contest for the specified amount of time. Defaults to 3 hours.",
     "end"                                   : "Ends the contest.",
-    "list [page number]"                    : "Lists the available contests.",
     "submit (problem code)"                 : "Submit to a problem.",
     "problem [problem code]"                : "View the problem statement for a problem. Enter no problem code to list all the problems in the contest.",
     "join"                                  : "Join the contest.",

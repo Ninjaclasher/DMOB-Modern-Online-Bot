@@ -28,9 +28,11 @@ async def process_command(message, command, content):
         await bot.send_message(message.channel, "Bot has not loaded. Please wait...")
         return
     try:
-        game = database.games[message.channel]
+        database.discord_channels_list[message.channel.id] = message.channel
+        game = database.games[message.channel.id]
     except KeyError:
-        game = database.games[message.channel] = DMOBGame(bot, message.channel)
+        game = None
+
     user = await database.load_user(bot, message.author.id)
     
     if command in help_list.keys() and command != "":
@@ -60,12 +62,17 @@ async def process_command(message, command, content):
     elif command == "contest":
         requires_contest_running = ["join", "rankings", "info", "end", "submit", "problem"]
         requires_in_contest = ["submit", "problem"]
+        if second_command in requires_contest_running:
+            if game is None or game.contest_over:
+                await bot.send_message(message.channel, "There is no contest running in this channel! Please start a contest first.")
+                return
+            elif game.contest_pending_submissions:
+                await bot.send_message(message.channel, "The contest is over! Currently waiting for the last submissions to finish running...")
+                return
+            elif second_command in requires_in_contest and not game.in_contest(user):
+               await bot.send_message(message.channel, "You are not in this contest! Please join first.")
+               return
         info['game'] = game
-        if second_command in requires_contest_running and not await game.check_contest_running():
-            return
-        elif second_command in requires_in_contest and not game.in_contest(user):
-            await bot.send_message(message.channel, "You are not in this contest! Please join first.")
-            return
     if command in help_list.keys():
         try:
             call = getattr(handlers, command.capitalize())

@@ -19,7 +19,7 @@ class Problem:
     
     @property
     def file(self):
-        return "problems/{0}.pdf".format(self.code)
+        return "problems/{0}.pdf".format(self.id)
     
     @property
     def author(self):

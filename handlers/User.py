@@ -54,8 +54,12 @@ class User(BaseHandler):
             em.add_field(name="No Submissions", value="{} has no submissions.".format(user.discord_user.mention))
         else:
             for x in current_list:
-                values = ["Problem: {}".format(x.problem.name), "Score: {0}/{1}".format(x.points, x.total), "Verdict: {}".format(x.result)]
-                em.add_field(name="Submission #{}".format(x.submission_id), value='\n'.join(values))
+                values = """\
+Problem: {0}
+Score: {1}/{2}
+Verdict: {3}
+                """.format(x.problem.name, x.points, x.total, x.result)
+                em.add_field(name="Submission #{}".format(x.submission_id), value=values)
         await info['bot'].send_message(info['channel'], embed=em)
 
     async def make(self, info):

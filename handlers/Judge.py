@@ -14,10 +14,16 @@ def run_judge(judge_name):
     import dmoj.judge
     dmoj.judge.main()
 
+def get_judge(judge_name):
+    try:
+        return database.get_judges(name=judge_name)[0]
+    except IndexError:
+        return None
+
 class Judge(BaseHandler):
     async def list(self, info):
         online_judges = [x.name for x in database.judgeserver.judges.judges]
-        offline_judges = [x for x in database.judge_list if x.name not in online_judges] if info['user'].is_admin else []
+        offline_judges = [x for x in database.get_judges() if x.name not in online_judges] if info['user'].is_admin else []
         judge_name = ["✓ {}".format(x) for x in online_judges] + [x.name for x in offline_judges]
         judge_ping = [str(round(x.latency,3)) if x.latency is not None else "N/A" for x in database.judgeserver.judges.judges] + ["N/A"]*len(offline_judges)
         judge_load = [str(round(x.load, 3)) if x.load < 1e10 else "N/A" for x in database.judgeserver.judges.judges] + ["N/A"]*len(offline_judges)
@@ -39,7 +45,7 @@ class Judge(BaseHandler):
             await info['bot'].send_message(info['channel'], "Please enter a judge name.")
             return
         with await database.locks["judge"][judge_name]:
-            if judge_name not in [x.name for x in database.judge_list]:
+            if get_judge(judge_name) is None:
                 await info['bot'].send_message(info['channel'], "Judge with name `{}` does not exist.".format(info['content'][0]))
                 return
             em = Embed(title="Judge Info", description="{} Details".format(judge_name), color=BOT_COLOUR)
@@ -71,7 +77,7 @@ class Judge(BaseHandler):
             return
         with await database.locks["judge"][judge_name]:
             await info['bot'].delete_message(info['message'])
-            if judge_name in [x.name for x in database.judge_list]:
+            if get_judge(judge_name) is not None:
                 await info['bot'].send_message(info['channel'], "Judge with name `{}` already exists.".format(judge_name))
                 return
             database.add_judge(models.Judge(None, judge_name, judge_key))
@@ -86,14 +92,11 @@ class Judge(BaseHandler):
             await info['bot'].send_message(info['channel'], "Please enter a valid judge name.")
             return
         with await database.locks["judge"][judge_name]:
-            if not judge_name in [x.name for x in database.judge_list]:
+            judge = get_judge(judge_name)
+            if judge is None:
                 await info['bot'].send_message(info['channel'], "Judge with name `{}` does not exist.".format(judge_name))
                 return
-            
-            for x in range(len(database.judge_list)):
-                if database.judge_list[x].name == judge_name:
-                    database.delete_judge(x) 
-            
+            database.delete_judge(judge)
             await info['bot'].send_message(info['channel'], "Judge `{}` successfully deleted!".format(judge_name))
 
     async def start(self, info):
@@ -101,7 +104,7 @@ class Judge(BaseHandler):
             return
         try:
             judge_name = info['content'][0]
-            if judge_name not in [x.name for x in database.judge_list]:
+            if get_judge(judge_name) is None:
                 raise IndexError
         except IndexError:
             await info['bot'].send_message(info['channel'], "Please enter a valid judge name.")
@@ -120,7 +123,7 @@ class Judge(BaseHandler):
             return
         try:
             judge_name = info['content'][0]
-            if judge_name not in [x.name for x in database.judge_list]:
+            if get_judge(judge_name) is None:
                 raise IndexError
             elif judge_name not in database.judges.keys():
                 raise KeyError

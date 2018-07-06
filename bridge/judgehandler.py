@@ -54,8 +54,8 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
             self.server.unschedule(self._no_response_job)
         self.server.judges.remove(self)
 
-    def _authenticate(self, name, key):
-        return Judge(None, name, key) in database.judge_list
+    def _authenticate(self, id, key):
+        return database.authenticate_judge(id, key)
 
     def _format_send(self, data):
         return super(JudgeHandler, self)._format_send(json.dumps(data, separators=(',', ':')))
@@ -156,11 +156,7 @@ class JudgeHandler(ProxyProtocolMixin, ZlibPacketHandler):
         self.batch_id = None
     
     def set_submission(self, id, points, total, time, memory, status_code):
-        user_id = self.server.judges.submission_info[id][0]
-        problem = self.server.judges.submission_info[id][1]
-        sub_time = self.server.judges.submission_info[id][2]
-        source = self.server.judges.submission_info[id][3]
-        self.server.judges.finished_submissions[id] = Submission(id, points, total, time, memory, status_code, user_id, problem.code, sub_time, source)
+        self.server.judges.finished_submissions[id] = Submission(id, points, total, time, memory, status_code)
 
     def on_grading_end(self, packet):
         time = 0

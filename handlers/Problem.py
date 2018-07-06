@@ -3,6 +3,7 @@ from discord import *
 from util import *
 import asyncio
 import database
+import datetime
 import handlers
 import models
 import os
@@ -16,12 +17,11 @@ async def wait_submission_finish(bot, channel, id, user, contest):
         try:
             sub = database.judgeserver.judges.finished_submissions[id]
             with await database.locks["submissions"][id]:
-                sub.game = contest
+                database.add_submission(sub)
+                sub = database.get_submissions(id=id,contest_subs=True)[0]
+                await sub.user.update_points()
                 if contest is not None:
                     await contest.on_finish_submission(sub)
-                else:
-                    database.add_submission(sub)
-                    await sub.user.update_points()
             print(sub)
             info = {
                 'bot'    : bot,
@@ -64,20 +64,20 @@ class Problem(BaseHandler):
         await info['bot'].send_message(info['channel'], embed=em)
 
     async def view(self, info, in_contest=False):
+        try:
+            problem_code = info['content'][0].lower()
+            problem = database.problem_list[problem_code]
+        except KeyError:
+            await info['bot'].send_message(info['channel'], "Please enter a valid problem code.")
+            return
+        except IndexError:
+            await info['bot'].send_message(info['channel'], "Please enter a problem code.")
+            return
         with await database.locks["problem"][problem_code]:
-            try:
-                problem_code = info['content'][0].lower()
-                problem = database.problem_list[problem_code]
-            except KeyError:
-                await info['bot'].send_message(info['channel'], "Please enter a valid problem code.")
-                return
-            except IndexError:
-                await info['bot'].send_message(info['channel'], "Please enter a problem code.")
-                return
             if not await has_perm(info['bot'], info['channel'], info['user'], "view this problem", not problem.is_public and not in_contest):
                 return
-            description = "Details on problem `{}`".format(problem.code) if not in_contest else description = info['description']
-            em = Embed(title="Problem Info", description=description, color=BOT_COLOUR
+            description = "Details on problem `{}`".format(problem.code) if not in_contest else info['description']
+            em = Embed(title="Problem Info", description=description, color=BOT_COLOUR)
             em.add_field(name="Problem Name", value=problem.name)
             em.add_field(name="Problem Code", value=problem.code)
             em.add_field(name="Point Value", value="{}p".format(problem.point_value if not in_contest else 100))   
@@ -117,8 +117,8 @@ class Problem(BaseHandler):
             if problem_code in database.problem_list.keys():
                 await info['bot'].send_message(info['channel'], "A problem with problem code `{}` already exists. Please try again.".format(problem_code))
                 return
-            database.add_problem(models.Problem(None, name, problem_code, info['user'].id, time_limit, memory_limit, point_value))
-            with open("problems/{0}.pdf".format(problem_code), "wb") as f:
+            id = database.add_problem(models.Problem(None, name, problem_code, info['user'].id, time_limit, memory_limit, point_value))
+            with open("problems/{0}.pdf".format(id), "wb") as f:
                 f.write(requests.get(info['message'].attachments[0]['url']).content)
         await info['bot'].delete_message(info['message'])
         await info['bot'].send_message(info['channel'], "Problem `{}` successfully created!".format(problem_code))
@@ -184,17 +184,14 @@ class Problem(BaseHandler):
             return            
         try:
             problem_code = info['content'][0].lower()
-        except (KeyError, ValueError, IndexError):
+            if problem_code not in database.problem_list.keys():
+                raise ValueError
+        except (KeyError, IndexError):
             await info['bot'].send_message(info['channel'], "Failed to parse the message content to delete the problem. Please try again.")        
+        except ValueError:
+            await info['bot'].send_message(info['channel'], "Problem `{}` does not exist.".format(problem_code))
 
         with await database.locks["problem"][problem_code]:
-            if problem_code not in database.problem_list.keys():
-                await info['bot'].send_message(info['channel'], "Problem `{}` does not exist.".format(problem_code))
-                return
-            try:
-                os.system("mv problems/{0}.pdf deleted_problems/{0}_{1}.pdf".format(problem_code, int(time.time())))
-            except FileNotFoundError:
-                pass
             database.delete_problem(database.problem_list[problem_code])
         await info['bot'].send_message(info['channel'], "Successfully deleted problem `{}`.".format(problem_code))
 
@@ -203,7 +200,7 @@ class Problem(BaseHandler):
             await info['bot'].send_message(info['channel'], "Please upload one file for judging in the message.")
             return
         url = info['message'].attachments[0]["url"]
-        submission_time = time.time()
+        submission_time = datetime.datetime.now()
 
         exceptions = {
             IndexError        : "Please select a problem to submit the code to.",
@@ -227,7 +224,7 @@ class Problem(BaseHandler):
  
         if not await has_perm(info['bot'], info['channel'], info['user'], "submit to private problems", not problem.is_public and contest is None):
             return
-        id = database.create_submission(models.Submission(None, result="QU", user=info['user'].id, problem=problem_code, submission_time=submission_time, source=code))
-        database.judgeserver.judges.judge(id, problem, judge_lang[info['user'].language], code, info['user'].id, submission_time)
+        id = database.create_submission(models.Submission(None, result="QU", user=info['user'].id, problem=problem_code, submission_time=submission_time, source=code, contest=contest))
+        database.judgeserver.judges.judge(id, problem, judge_lang[info['user'].language], code)
         await info['bot'].send_message(info['channel'], "{0}, Submitting code to `{1}`. Please wait.".format(info['user'].discord_user.mention, problem_code))
         await info['bot'].loop.create_task(wait_submission_finish(info['bot'], info['channel'], id, info['user'], contest))

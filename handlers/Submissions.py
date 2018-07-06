@@ -7,14 +7,9 @@ import os
 
 async def get_submission(self, info):
     try:
-        sub = database.get_submission(int(info['content'][0]))
-        if sub is None:
-            raise KeyError
-        return sub
-    except (ValueError, KeyError):
+        return database.get_submissions(id=int(info['content'][0]))[0]
+    except (KeyError, IndexError):
         await info['bot'].send_message(info['channel'], "Please enter a valid submission id.")
-    except IndexError:
-        await info['bot'].send_message(info['channel'], "Please enter a submission id.")
     return None
 
 def batched(cases):

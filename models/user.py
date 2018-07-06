@@ -17,11 +17,8 @@ class Player:
         return self.id, self.points, self.language, self.is_admin
 
     async def update_points(self):
-        with await database.locks["user"][self.id]:
-            max_subs = defaultdict(lambda: 0.0)
-            for x in self.submissions:
-                max_subs[x.problem.code] = max(max_subs[x.problem.code], x.points/x.total*x.problem.point_value if x.total > 0 else 0)
-            self.points = sum(max_subs.values())
+        with await database.locks["user"][self.id]:    
+            self.points = sum(x[1] for x in database.get_best_submissions(self))
 
     @property
     def discord_user(self):
@@ -66,6 +63,9 @@ class Rank:
         self.rating = rating
         self.volatility = volatility
     
+    def __eq__(self, other):
+        return self.user == other.user
+
     def db_save(self):
         return self.id, self.user, self.rating, self.volatility
 

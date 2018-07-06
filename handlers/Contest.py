@@ -6,9 +6,15 @@ import database
 import models
 import os
 
+def get_contest(contest_name):
+    try:
+        return database.get_contests(name=contest_name)[0]
+    except IndexError:
+        return None
+
 class Contest(BaseHandler):
     async def list(self, info):
-        current_list, page_num = await get_current_list(info, list(database.contest_list.values()))
+        current_list, page_num = await get_current_list(info, database.get_contests())
         if current_list is None:
             return
         em = Embed(title="Contests",description="Contest page {}".format(page_num), color=BOT_COLOUR)
@@ -25,7 +31,7 @@ class Contest(BaseHandler):
         content = info['content']
         try:
             contest_name = content[0]
-            if contest_name in database.contest_list.keys():
+            if get_contest(contest_name) is not None:
                 raise ValueError
         except IndexError:
             await info['bot'].send_message(info['channel'], "Please enter a contest name.");
@@ -54,7 +60,8 @@ class Contest(BaseHandler):
         content = info['content']
         try:
             contest_name = content[0]
-            if contest_name not in database.contest_list.keys():
+            contest = get_contest(contest_name)
+            if contest is None:
                 raise ValueError
         except IndexError:
             await info['bot'].send_message(info['channel'], "Please enter a contest name.")
@@ -62,26 +69,38 @@ class Contest(BaseHandler):
         except ValueError:
             await info['bot'].send_message(info['channel'], "Contest `{}` does not exist.".format(contest_name))
             return
-        database.delete_contest(database.contest_list[contest_name])
+        database.delete_contest(contest)
         
         await info['bot'].send_message(info['channel'], "Contest `{}` sucessfully deleted.".format(contest_name))
 
     async def start(self, info):
-        if len(info['content']) < 1:
+        if info['game'] is not None and not info['game'].contest_over:
+            await info['bot'].send_message(info['channel'], "There is already a contest runnning in this channel. Please wait until the contest is over.")
+            return
+        try:
+            contest_name = info['content'][0]
+            contest = get_contest(contest_name)
+            if contest is None:
+                raise KeyError
+        except IndexError:
             await info['bot'].send_message(info['channel'], "Please select a contest to run.")
-        else:
-            try:
-                c = database.contest_list[info['content'][0].lower()]
-            except KeyError:
-                await info['bot'].send_message(info['channel'], "Please enter a valid contest.")
-                return
-            try:
-                time_limit = int(info['content'][1])
-                if time_limit < 1 or time_limit > 31536000:
-                    raise ValueError
-                await info['game'].start_round(c, info['user'], time_limit)
-            except (IndexError, ValueError):
-                await info['game'].start_round(c, info['user'])
+            return
+        except KeyError:
+            await info['bot'].send_message(info['channel'], "Please enter a valid contest.")
+            return
+        try:
+            time_limit = int(info['content'][1])
+            if time_limit < 1 or time_limit > 31536000:
+                raise ValueError
+        except (IndexError, ValueError):
+            time_limit=10800
+        
+        import DMOBGame
+        channel_id = info['channel'].id
+        game = DMOBGame.DMOBGame(info['bot'], None, channel_id, contest=contest.id, window=time_limit)
+        game.id = database.create_game(game)
+        database.games[channel_id] = game
+        await game.start_round(info['user'])
 
     async def join(self, info):
         await info['game'].join(info['user'])

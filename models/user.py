@@ -34,7 +34,7 @@ class Player:
 
     @property
     def volatility(self):
-        return 385 if not self.rated else self.rank[-1].volatility
+        return 535 if not self.rated else self.rank[-1].volatility
 
     @property
     def rank_title(self):

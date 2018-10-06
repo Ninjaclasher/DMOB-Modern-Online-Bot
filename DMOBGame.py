@@ -26,17 +26,17 @@ import handlers
 #              user | dmob_game
 
 class DMOBGame:
-    def __init__(self, bot, id, channel, contest="", start_time=datetime.datetime.now(), window=10800, contest_state=0):
+    def __init__(self, bot, id, channel, contest="", start_time=None, window=10800, contest_state=0):
         self.bot = bot
-        
+
         self.id = id
         self._channel = channel
         self._contest = contest
         self.contest = database.get_contests(deleted_contests=True, id=self._contest)[0]
-        self.start_time = start_time
+        self.start_time = start_time or datetime.datetime.now()
         self.window = window
         self.contest_state = contest_state
-        
+
         self.running_submissions = set()
         self.members = []
 

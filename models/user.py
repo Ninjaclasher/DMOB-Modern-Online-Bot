@@ -54,7 +54,7 @@ class Player:
 
     @property
     def submissions(self):
-        return database.get_submissions(self)
+        return database.get_submissions(self.id)
 
 class Rank:
     def __init__(self, id, user, rating, volatility):

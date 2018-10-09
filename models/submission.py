@@ -52,12 +52,6 @@ class Submission:
     def score(self):
         return int(self.points/float(self.total)*100) if self.total > 0 else 0
 
-    @property
-    def contest_submission_time(self):
-        if self.contest is None:
-            raise ValueError("Not a contest submission.")
-        return (self.submission_time-datetime.datetime(2018,1,1)).total_seconds()
-
 class SubmissionTestCase:
     def __init__(self, id, submission_id, points=0.0, total=0.0, time=0.0, memory=0, status="IE", case=0, batch=0):
         self.id = id

@@ -31,7 +31,9 @@ def db_insert(table, values):
         """.format(table, sql_format(values)), values)
         cursor.close()
         db.commit()
-        return cursor.lastrowid
+        values = cursor.lastrowid
+        del cursor
+        return values
 
 def db_select(table, where_condition="", values=(), extra=""):
     global db
@@ -44,8 +46,10 @@ def db_select(table, where_condition="", values=(), extra=""):
             {2}
         """.format(table, "WHERE " + where_condition if where_condition != "" else "", extra), values
         )
+        values = cursor.fetchall()
         cursor.close()
-        return cursor.fetchall()
+        del cursor
+        return values
 
 def db_delete(table, where_condition="", values=()):
     global db
@@ -288,7 +292,6 @@ async def load(bot):
     
     global db
     db = pymysql.connect(MYSQL_HOST, MYSQL_USER, MYSQL_PASSWD, MYSQL_DATABASE)
-    cursor = db.cursor()
 
     locks["problem"] = defaultdict(lambda: asyncio.Lock())
     locks["submissions"] = defaultdict(lambda: asyncio.Lock())
@@ -310,7 +313,6 @@ async def load(bot):
         discord_users_list[x[0]] = await bot.get_user_info(x[0])
         users[x[0]] = Player(*x)
 
-    cursor.close()
     loading = False
 
 async def save():
@@ -333,3 +335,4 @@ async def save():
     db_delete("dmob_user")
     for x in users.values():
         db_insert("dmob_user", x.db_save())
+    db.close()

@@ -220,8 +220,10 @@ class Problem(BaseHandler):
             await info['bot'].send_message(info['channel'], exceptions[type(e)])
             return
         finally:
-            await info['bot'].delete_message(info['message'])
- 
+            try:
+                await info['bot'].delete_message(info['message'])
+            except errors.Forbidden:
+                pass
         if not await has_perm(info['bot'], info['channel'], info['user'], "submit to private problems", not problem.is_public and contest is None):
             return
         id = database.create_submission(models.Submission(None, result="QU", user=info['user'].id, problem=problem_code, submission_time=submission_time, source=code, contest=contest))

@@ -1,26 +1,43 @@
 # DMOB: Modern Online Bot
-A Discord bot with program judging capabilities by using the <a href=https://github.com/dmoj>DMOJ</a> judge.
+A Discord bot with program judging capabilities by using the [DMOJ](https://github.com/dmoj) judge.
 
-The bot utilizes the DMOJ Judge. Follow the instructions to install it <a href=https://github.com/dmoj/judge>here</a>.
-This bot also requires the Discord api to be installed. Install it with `pip3 install discord`.
+## Installation
 
-`cd`/`dir` inside the cloned DMOB directory.
-
-Create the following folders:
-```
-judges
-problems
+First, clone the repository:
+```bash
+$ git clone https://github.com/Ninjaclasher/DMOB-Modern-Online-Bot
+$ cd DMOB-Modern-Online-Bot
 ```
 
-Edit the `settings.py` file and fill in the `DMOBToken` field with a Discord bot token. As well, edit the other fields to suit your needs.
-
-You will also need to create a MySQL database:
+Next, install the prerequisites
+```bash
+$ apt update
+$ apt install mariadb-server git python3
+$ pip install -r requirements.txt
 ```
+
+As well, create the MySQL database and load the tables:
+```bash
 $ mysql -u root -p
-mysql> CREATE DATABASE dmob DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;
-mysql> GRANT ALL PRIVILEGES ON dmob.* to 'dmob'@'localhost' IDENTIFIED BY '<password>';
-mysql> exit
+MariaDB> CREATE DATABASE dmob DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;
+MariaDB> GRANT ALL PRIVILEGES ON dmob.* to 'dmob'@'localhost' IDENTIFIED BY '<password>';
+MariaDB> exit
+$ mysqldump -uroot -p dmob < dmob.sql
 ```
-(UNFINISHED)
 
-Usage Instructions: `python3 DMOBMain.py`
+Finally, create the necessary files and folders:
+```
+$ mkdir judges
+$ mkdir problems
+```
+
+## Usage
+
+Edit the `settings.py` file, and fill in any necessary fields. In particular, you should fill in the `DMOBToken` field with a Discord bot token.
+
+To run:
+```bash
+$ python3 DMOBMain.py
+```
+
+To add judges, please follow the instructions from the [DMOJ Judge](https://github.com/DMOJ/judge).

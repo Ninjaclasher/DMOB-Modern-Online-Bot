@@ -22,7 +22,7 @@ $ mysql -u root -p
 MariaDB> CREATE DATABASE dmob DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;
 MariaDB> GRANT ALL PRIVILEGES ON dmob.* to 'dmob'@'localhost' IDENTIFIED BY '<password>';
 MariaDB> exit
-$ mysqldump -uroot -p dmob < dmob.sql
+$ mysql -uroot -p dmob < dmob.sql
 ```
 
 Finally, create the necessary files and folders:

@@ -9,7 +9,7 @@ RANKING_COLOUR = [0xFFFFFF, 0x909090, 0x00A900, 0x0000FF, 0x800080, 0xFFB100, 0x
 
 MYSQL_USER = "dmob"
 MYSQL_DATABASE = "dmob"
-MYSQL_HOST ="localhost"
+MYSQL_HOST = "localhost"
 MYSQL_PASSWD = "<password>"
 
 DMOBToken = ""

@@ -1,10 +1,11 @@
 import math
-import time
 
 from bisect import bisect
 
+
 def plural(num):
     return "s" if num != 1 else ""
+
 
 def to_time(secs):
     names = [[60, "minute"], [3600, "hour"], [86400, "day"], [604800, "week"], [2419200, "month"], [31536000, "year"]]
@@ -17,10 +18,14 @@ def to_time(secs):
     else:
         for x in range(len(names)-1):
             if names[x][0] <= secs < names[x+1][0]:
-                return "{0} {1}{2} {3}".format(secs//names[x][0], names[x][1], plural(secs//names[x][0]), to_time(secs%names[x][0])).strip()
+                return "{0} {1}{2} {3}".format(secs // names[x][0], names[x][1],
+                                               plural(secs // names[x][0]),
+                                               to_time(secs % names[x][0])).strip()
+
 
 def to_datetime(this_time):
     return this_time.strftime('%h %d, %Y %I:%M:%S %p')
+
 
 def to_memory(kilobyte):
     byte = ["K", "M", "G", "T", "P", "E", "Z"]
@@ -30,15 +35,17 @@ def to_memory(kilobyte):
         return "0B"
     elif kilobyte > 2**(len(byte)*10):
         raise ValueError("Kilobyte is too large.")
-        
-    i  = bisect([2**(10*x) for x in range(len(byte))], kilobyte) - 1
+
+    i = bisect([2**(10*x) for x in range(len(byte))], kilobyte) - 1
     return "{0}{1}B".format(round(kilobyte/float(2**(i*10)), 2), byte[i])
+
 
 def get_element(arr, val):
     for x in arr:
         if x == val:
             return x
     return None
+
 
 def rational_approximation(t):
     c = [2.515517, 0.802853, 0.010328]
@@ -47,6 +54,7 @@ def rational_approximation(t):
     denominator = ((d[2] * t + d[1]) * t + d[0]) * t + 1.0
     return t - numerator / denominator
 
+
 def normal_CDF_inverse(p):
     assert 0.0 < p < 1
     if p < 0.5:
@@ -54,8 +62,10 @@ def normal_CDF_inverse(p):
     else:
         return rational_approximation(math.sqrt(-2.0 * math.log(1.0 - p)))
 
+
 def WP(RA, RB, VA, VB):
     return (math.erf((RB - RA) / math.sqrt(2 * (VA * VA + VB * VB))) + 1) / 2.0
+
 
 def recalculate_ratings(old_rating, old_volatility, actual_rank, times_rated):
     # actual_rank: 1 is first place, N is last place
@@ -113,9 +123,10 @@ def recalculate_ratings(old_rating, old_volatility, actual_rank, times_rated):
 async def has_perm(bot, channel, user, message, alternate_condition=True, no_perm_message=True):
     if not user.is_admin and alternate_condition:
         if no_perm_message:
-             await bot.send_message(channel, "You do not have permission to {}.".format(message))
+            await bot.send_message(channel, "You do not have permission to {}.".format(message))
         return False
     return True
+
 
 async def get_current_list(info, arr, elements_per_page=9):
     try:
@@ -125,7 +136,8 @@ async def get_current_list(info, arr, elements_per_page=9):
     except (ValueError, IndexError):
         await info['bot'].send_message(info['channel'], "Please enter a valid page number.")
         return None, 0
-    return arr[(page_num-1)*elements_per_page : page_num*elements_per_page], page_num
+    return arr[(page_num-1)*elements_per_page:page_num*elements_per_page], page_num
+
 
 from settings import *
 
@@ -242,4 +254,3 @@ VERDICT_COLOUR = {
     'AB'    : 0xC0C0C0,
     'QU'    : 0xC0C0C0,
 }
-

@@ -5,6 +5,7 @@ from collections import defaultdict
 from util import *
 from settings import *
 
+
 problem_list = {}
 discord_users_list = {}
 discord_channels_list = {}
@@ -16,11 +17,14 @@ judges = {}
 loading = False
 db = None
 
+
 def sql_format(arr):
     return ", ".join(["%s"]*len(arr))
 
+
 def parse_args(*args):
     return tuple(x for x in args if x is not None)
+
 
 def db_insert(table, values):
     global db
@@ -34,6 +38,7 @@ def db_insert(table, values):
         values = cursor.lastrowid
         del cursor
         return values
+
 
 def db_select(table, where_condition="", values=(), extra=""):
     global db
@@ -51,6 +56,7 @@ def db_select(table, where_condition="", values=(), extra=""):
         del cursor
         return values
 
+
 def db_delete(table, where_condition="", values=()):
     global db
     with locks["db"]["read"] and locks["db"]["write"]:
@@ -63,6 +69,7 @@ def db_delete(table, where_condition="", values=()):
         )
         cursor.close()
         db.commit()
+
 
 def db_update(table, id, field="deleted", value="1"):
     global db
@@ -77,12 +84,14 @@ def db_update(table, id, field="deleted", value="1"):
         cursor.close()
         db.commit()
 
+
 def add_contest(contest):
     id = db_insert("dmob_contest", contest.db_save())
-    for x,y in enumerate(contest._problems,1):
+    for x, y in enumerate(contest._problems, 1):
         db_insert("dmob_contest_problem", (None, id, x, y))
 
-def get_contests(deleted_contests=False,name=None,id=None):
+
+def get_contests(deleted_contests=False, name=None, id=None):
     tmp = db_select(
         "dmob_contest",
         where_condition="1 {0} {1} {2}".format(
@@ -104,23 +113,28 @@ def get_contests(deleted_contests=False,name=None,id=None):
         contests.append(Contest(*x[0:2], [y[3] for y in problems], *x[2:]))
     return contests
 
+
 def delete_contest(contest):
     db_update("dmob_contest", contest.id)
+
 
 def create_game(game):
     return db_insert("dmob_game", game.db_save())
 
+
 def update_game_state(game):
     db_update("dmob_game", game.id, "state", game.contest_state)
 
-def get_game(channel_id,bot=None):
+
+def get_game(channel_id, bot=None):
     tmp = db_select(
         "dmob_game",
         where_condition="id = (SELECT MAX(id) from dmob_game WHERE channel = %s)",
         values=(channel_id,),
     )
-    tmp = cursor.fetchall()
+    import DMOBGame
     return None if len(tmp) == 0 else DMOBGame(bot, *tmp[0])
+
 
 def add_problem(problem):
     global problem_list
@@ -128,18 +142,22 @@ def add_problem(problem):
     problem_list[problem.code] = problem
     return problem.id
 
+
 def change_problem(problem, field, new_value):
     global problem_list
     db_update("dmob_problem", problem.id, field, new_value)
     problem.__dict__[field] = new_value
+
 
 def delete_problem(problem):
     global problem_list
     db_delete("dmob_problem", "id = %s", (problem.id, ))
     del problem_list[problem.code]
 
+
 def add_rank(rank):
     db_insert("dmob_user_rating", rank.db_save())
+
 
 def get_ranks(user):
     tmp = db_select(
@@ -149,6 +167,7 @@ def get_ranks(user):
     )
     from models import Rank
     return [Rank(*x) for x in tmp]
+
 
 def add_submission(sub):
     global db
@@ -161,13 +180,16 @@ def add_submission(sub):
     cursor.close()
     db.commit()
 
+
 def create_submission(sub):
     return db_insert("dmob_submission", sub.db_save())
+
 
 def delete_submission(sub):
     db_update("dmob_submission", sub.submission_id)
 
-def get_submissions(user=None,reverse=True,deleted_subs=False,contest_subs=False,id=None):
+
+def get_submissions(user=None, reverse=True, deleted_subs=False, contest_subs=False, id=None):
     global db
     cursor = db.cursor()
     cursor.execute("""\
@@ -191,6 +213,7 @@ def get_submissions(user=None,reverse=True,deleted_subs=False,contest_subs=False
     from models import Submission
     return [Submission(*x) for x in tmp]
 
+
 def get_best_submissions(user):
     global db
     cursor = db.cursor()
@@ -199,12 +222,14 @@ def get_best_submissions(user):
         FROM dmob_submission sub
             LEFT JOIN dmob_problem problem ON problem.code = sub.problem
             LEFT JOIN dmob_game game ON game.id = sub.contest
-        WHERE (game.state = 3 OR sub.contest IS NULL) AND sub.user = %s AND sub.deleted = 0 AND sub.result NOT IN ("QU", "IE", "CE")
+        WHERE (game.state = 3 OR sub.contest IS NULL) AND sub.user = %s
+                AND sub.deleted = 0 AND sub.result NOT IN ("QU", "IE", "CE")
         GROUP BY sub.problem
         ORDER BY best, first
     """, (user.id,))
     cursor.close()
     return cursor.fetchall()
+
 
 def get_best_contest_submissions(user, game):
     global db
@@ -216,22 +241,24 @@ def get_best_contest_submissions(user, game):
             LEFT JOIN dmob_contest_problem cp ON cp.problem = sub.problem AND cp.contest_id = game.contest
         WHERE sub.deleted = 0 AND sub.user = %s AND sub.result NOT IN ("QU", "IE", "CE") AND sub.contest = %s
                 AND (sub.points/sub.total) = (
-                    SELECT MAX(points/total) 
-                    FROM dmob_submission 
+                    SELECT MAX(points/total)
+                    FROM dmob_submission
                     WHERE contest = %s AND user = %s AND sub.problem = problem
-                )       
+                )
         GROUP BY sub.problem
         ORDER BY cp.problem_position
     """, (user.id, game.id, game.id, user.id))
     cursor.close()
     tmp = cursor.fetchall()
-    best_subs = [[0,0]]*len(game.contest.problems)
+    best_subs = [[0, 0]]*len(game.contest.problems)
     for x in tmp:
-        best_subs[x[0]-1] = [x[1]*100,(x[2]-game.start_time).total_seconds()]
+        best_subs[x[0]-1] = [x[1]*100, (x[2]-game.start_time).total_seconds()]
     return best_subs
+
 
 def add_submission_case(testcase):
     db_insert("dmob_submission_case", testcase.db_save())
+
 
 def get_submission_cases(submission_id=None):
     tmp = db_select(
@@ -242,8 +269,10 @@ def get_submission_cases(submission_id=None):
     from models import SubmissionTestCase
     return [SubmissionTestCase(*x) for x in tmp]
 
+
 def add_judge(judge):
     db_insert("dmob_judge", judge.db_save())
+
 
 def get_judges(deleted_judges=False, name=None, id=None):
     tmp = db_select(
@@ -253,10 +282,11 @@ def get_judges(deleted_judges=False, name=None, id=None):
                 "AND name = %s" if name is not None else "",
                 "AND id = %s" if id is not None else "",
             ),
-        values = parse_args(name, id),
+        values=parse_args(name, id),
     )
     from models import Judge
     return [Judge(*x) for x in tmp]
+
 
 def authenticate_judge(id, key):
     tmp = db_select(
@@ -266,8 +296,10 @@ def authenticate_judge(id, key):
     )
     return len(tmp) > 0
 
+
 def delete_judge(judge):
     db_update("dmob_judge", judge.id)
+
 
 async def load_user(bot, user_id):
     global users
@@ -280,8 +312,9 @@ async def load_user(bot, user_id):
         users[user_id] = Player(user_id)
         return users[user_id]
 
+
 async def load(bot):
-    global loading    
+    global loading
     loading = True
     global problem_list
     global discord_users_list
@@ -289,7 +322,7 @@ async def load(bot):
     global judgeserver
     global judges
     global locks
-    
+
     global db
     db = pymysql.connect(MYSQL_HOST, MYSQL_USER, MYSQL_PASSWD, MYSQL_DATABASE)
 
@@ -299,13 +332,13 @@ async def load(bot):
     locks["user"] = defaultdict(lambda: asyncio.Lock())
     locks["contest"] = defaultdict(lambda: asyncio.Lock())
     locks["db"] = defaultdict(lambda: threading.RLock())
-    
+
     from bridge import JudgeHandler, JudgeServer
-    from models import Problem, Contest, Player, Judge
-    
+    from models import Problem, Player
+
     judgeserver = JudgeServer(BRIDGED_IP_ADDRESS, JudgeHandler)
     threading.Thread(target=judgeserver.serve_forever).start()
-    
+
     for x in db_select("dmob_problem"):
         problem_list[x[2]] = Problem(*x)
 
@@ -315,19 +348,20 @@ async def load(bot):
 
     loading = False
 
+
 async def save():
     global games
     global users
     global judgeserver
     global judges
     global locks
-    
+
     for i, x in locks.items():
         if i != "db":
             for y in x.values():
                 with await y:
                     pass
-    
+
     for x in judges.values():
         x.terminate()
     judgeserver.stop()

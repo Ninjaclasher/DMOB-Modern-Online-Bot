@@ -1,14 +1,16 @@
-from .BaseHandler import BaseHandler
 from discord import *
+
+from .BaseHandler import BaseHandler
 from util import *
 import database
+
 
 class Language(BaseHandler):
     async def list(self, info):
         em = Embed(title="Language List", description="List of available languages", color=BOT_COLOUR)
         em.add_field(name="Languages", value="\n".join(judge_lang.keys()))
         await info['bot'].send_message(info['channel'], embed=em)
-    
+
     async def current(self, info):
         await info['bot'].send_message(info['channel'], "Your current language is `{}`".format(info['user'].language))
 

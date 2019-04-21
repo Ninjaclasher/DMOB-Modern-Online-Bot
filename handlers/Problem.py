@@ -1,14 +1,15 @@
+import asyncio
+import datetime
+import requests
+
 from .BaseHandler import BaseHandler
 from discord import *
 from util import *
-import asyncio
+
 import database
-import datetime
 import handlers
 import models
-import os
-import requests
-import time
+
 
 async def wait_submission_finish(bot, channel, id, user, contest):
     if contest is not None:
@@ -18,15 +19,15 @@ async def wait_submission_finish(bot, channel, id, user, contest):
             sub = database.judgeserver.judges.finished_submissions[id]
             with await database.locks["submissions"][id]:
                 database.add_submission(sub)
-                sub = database.get_submissions(id=id,contest_subs=True)[0]
+                sub = database.get_submissions(id=id, contest_subs=True)[0]
                 await sub.user.update_points()
                 if contest is not None:
                     await contest.on_finish_submission(sub)
             print(sub)
             info = {
-                'bot'    : bot,
+                'bot': bot,
                 'channel': channel if contest is None else user.discord_user,
-                'user'   : user,
+                'user': user,
                 'content': [str(id)],
             }
             await handlers.Submissions().view(info, live_submission=True, submission=sub)
@@ -35,10 +36,11 @@ async def wait_submission_finish(bot, channel, id, user, contest):
             pass
         await asyncio.sleep(0.5)
 
+
 class Problem(BaseHandler):
     command_help = {}
     command_help["add"] = [
-        ["Command",  "`" + COMMAND_PREFIX + "problem add (problem code) (problem name) (point value) (time limit) (memory limit)`"],
+        ["Command", "`" + COMMAND_PREFIX + "problem add (problem code) (problem name) (point value) (time limit) (memory limit)`"],
         ["Details", "Please include a file when adding the problem as the problem statement."],
         ["problem code", "The problem code that the problem should have. This should be unique with all problems."],
         ["problem name", "The user readable problem name."],
@@ -52,15 +54,16 @@ class Problem(BaseHandler):
         ["field to change", "The field in the problem to change. Possible fields are: [`" + "`, `".join(set(models.Problem().__dict__.keys()) - unchangeable_problem_fields) + "`]"],
         ["new value", "The new value for the field specified."],
     ]
+
     async def list(self, info):
         current_list, page_num = await get_current_list(info, list(database.problem_list.values()), 35)
-        current_list.sort(key = lambda x: x.name)
+        current_list.sort(key=lambda x: x.name)
         if current_list is None:
             return
-        em = Embed(title="Problems",description="Problem page {}".format(page_num), color=BOT_COLOUR)
-        em.add_field(name="Problem Name", value = '\n'.join(x.name for x in current_list))
-        em.add_field(name="Problem Code", value = '\n'.join(x.code for x in current_list))
-        em.add_field(name="Is Public", value = '\n'.join("Y" if x.is_public else "N" for x in current_list))
+        em = Embed(title="Problems", description="Problem page {}".format(page_num), color=BOT_COLOUR)
+        em.add_field(name="Problem Name", value='\n'.join(x.name for x in current_list))
+        em.add_field(name="Problem Code", value='\n'.join(x.code for x in current_list))
+        em.add_field(name="Is Public", value='\n'.join("Y" if x.is_public else "N" for x in current_list))
         await info['bot'].send_message(info['channel'], embed=em)
 
     async def view(self, info, in_contest=False):
@@ -80,12 +83,12 @@ class Problem(BaseHandler):
             em = Embed(title="Problem Info", description=description, color=BOT_COLOUR)
             em.add_field(name="Problem Name", value=problem.name)
             em.add_field(name="Problem Code", value=problem.code)
-            em.add_field(name="Point Value", value="{}p".format(problem.point_value if not in_contest else 100))   
+            em.add_field(name="Point Value", value="{}p".format(problem.point_value if not in_contest else 100))
             em.add_field(name="Time Limit", value="{}s".format(problem.time_limit))
             em.add_field(name="Memory Limit", value=to_memory(problem.memory_limit))
             if not in_contest and info['user'].is_admin:
                 em.add_field(name="Is Public", value="Y" if problem.is_public else "N")
-       
+
         await info['bot'].send_message(info['user'].discord_user, embed=em)
         await info['bot'].send_file(info['user'].discord_user, problem.file)
         await info['bot'].send_message(info['channel'], "{}, problem statement has been sent to your private messages.".format(info['user'].discord_user.mention))
@@ -104,15 +107,15 @@ class Problem(BaseHandler):
         try:
             if len(info['message'].attachments) != 1:
                 await info['bot'].send_message(info['channel'], "Please upload one file for the problem statement.")
-                return 
+                return
             elif len(content) < 5:
                 raise IndexError
             problem_code = content[0].lower()
             name = " ".join(content[1:-3])
             point_value, time_limit, memory_limit = map(int, content[-3:])
         except (KeyError, ValueError, IndexError, requests.HTTPError):
-            await info['bot'].send_message(info['channel'], "Failed to parse the message content to create a new problem. Please try again.") 
-        
+            await info['bot'].send_message(info['channel'], "Failed to parse the message content to create a new problem. Please try again.")
+
         with await database.locks["problem"][problem_code]:
             if problem_code in database.problem_list.keys():
                 await info['bot'].send_message(info['channel'], "A problem with problem code `{}` already exists. Please try again.".format(problem_code))
@@ -133,12 +136,12 @@ class Problem(BaseHandler):
                 em.add_field(name=x[0], value=x[1])
             await info['bot'].send_message(info['channel'], embed=em)
             return
-        
+
         exceptions = {
-            KeyError          : "The problem that you entered does not exist.",
-            IndexError        : "Failed to parse the message content to change the problem. Please try again.",
-            ValueError        : "The specified new value is invalid. Please try again.",
-            TypeError         : "Cannot change the field you entered. Please try again.",
+            KeyError: "The problem that you entered does not exist.",
+            IndexError: "Failed to parse the message content to change the problem. Please try again.",
+            ValueError: "The specified new value is invalid. Please try again.",
+            TypeError: "Cannot change the field you entered. Please try again.",
         }
         try:
             problem_code = content[0].lower()
@@ -161,9 +164,9 @@ class Problem(BaseHandler):
             return
 
         exceptions = {
-            KeyError          : "The problem that you entered does not exist.",
-            IndexError        : "Failed to parse the message content to change the problem. Please try again.",
-            ValueError        : "The specified new value is invalid. Please enter `public` or `private` try again.",
+            KeyError: "The problem that you entered does not exist.",
+            IndexError: "Failed to parse the message content to change the problem. Please try again.",
+            ValueError: "The specified new value is invalid. Please enter `public` or `private` try again.",
         }
         try:
             value = info['content'][0].lower()
@@ -176,18 +179,18 @@ class Problem(BaseHandler):
             return
 
         with await database.locks["problem"][problem_code]:
-            database.change_problem(problem, "is_public", (value=="public"))
+            database.change_problem(problem, "is_public", (value == "public"))
         await info['bot'].send_message(info['channel'], "Successfully made problem `{0}` {1}.".format(problem_code, value))
 
     async def delete(self, info):
         if not await has_perm(info['bot'], info['channel'], info['user'], "delete problems"):
-            return            
+            return
         try:
             problem_code = info['content'][0].lower()
             if problem_code not in database.problem_list.keys():
                 raise ValueError
         except (KeyError, IndexError):
-            await info['bot'].send_message(info['channel'], "Failed to parse the message content to delete the problem. Please try again.")        
+            await info['bot'].send_message(info['channel'], "Failed to parse the message content to delete the problem. Please try again.")
         except ValueError:
             await info['bot'].send_message(info['channel'], "Problem `{}` does not exist.".format(problem_code))
 
@@ -203,10 +206,10 @@ class Problem(BaseHandler):
         submission_time = datetime.datetime.now()
 
         exceptions = {
-            IndexError        : "Please select a problem to submit the code to.",
-            KeyError          : "Invalid problem code.",
+            IndexError: "Please select a problem to submit the code to.",
+            KeyError: "Invalid problem code.",
             UnicodeDecodeError: "Please upload a valid code file.",
-            ValueError        : "Please upload a file less than 65536 characters.",
+            ValueError: "Please upload a file less than 65536 characters.",
         }
         try:
             problem_code = info['content'][0]

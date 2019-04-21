@@ -4,7 +4,7 @@ from discord import *
 from util import *
 import database
 import models
-import os
+
 
 def get_contest(contest_name):
     try:
@@ -12,19 +12,20 @@ def get_contest(contest_name):
     except IndexError:
         return None
 
+
 class Contest(BaseHandler):
     async def list(self, info):
         current_list, page_num = await get_current_list(info, database.get_contests())
         if current_list is None:
             return
-        em = Embed(title="Contests",description="Contest page {}".format(page_num), color=BOT_COLOUR)
+        em = Embed(title="Contests", description="Contest page {}".format(page_num), color=BOT_COLOUR)
         if len(current_list) == 0:
             em.add_field(name="No Contests", value="There are no contests.")
         else:
             for x in current_list:
                 em.add_field(name=x.name, value="\n".join(y.name for y in x.problems))
         await info['bot'].send_message(info['channel'], embed=em)
-    
+
     async def add(self, info):
         if not await has_perm(info['bot'], info['channel'], info['user'], "add contests"):
             return
@@ -34,14 +35,14 @@ class Contest(BaseHandler):
             if get_contest(contest_name) is not None:
                 raise ValueError
         except IndexError:
-            await info['bot'].send_message(info['channel'], "Please enter a contest name.");
+            await info['bot'].send_message(info['channel'], "Please enter a contest name.")
             return
         except ValueError:
             await info['bot'].send_message(info['channel'], "Contest with name `{}` already exists.".format(contest_name))
             return
         s = set(content[1:])
-        not_exist = s-set(database.problem_list.keys())
-        if len(not_exist) > 0:    
+        not_exist = s - set(database.problem_list.keys())
+        if len(not_exist) > 0:
             await info['bot'].send_message(info['channel'], "The following problems do not exist, so the contest cannot be created: `{}`".format(" ".join(not_exist)))
             return
         elif len(content) == 1:
@@ -70,7 +71,7 @@ class Contest(BaseHandler):
             await info['bot'].send_message(info['channel'], "Contest `{}` does not exist.".format(contest_name))
             return
         database.delete_contest(contest)
-        
+
         await info['bot'].send_message(info['channel'], "Contest `{}` sucessfully deleted.".format(contest_name))
 
     async def start(self, info):
@@ -93,8 +94,8 @@ class Contest(BaseHandler):
             if time_limit < 1 or time_limit > 31536000:
                 raise ValueError
         except (IndexError, ValueError):
-            time_limit=10800
-        
+            time_limit = 10800
+
         import DMOBGame
         channel_id = info['channel'].id
         game = DMOBGame.DMOBGame(info['bot'], None, channel_id, contest=contest.id, window=time_limit)

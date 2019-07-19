@@ -2,3 +2,4 @@ discord==0.16.2
 dmoj
 pymysql
 requests
+sortedcontainers
